@@ -19,6 +19,7 @@ func TestValidateJobSpecStruct(t *testing.T) {
 					Name:    "my-valid-job",
 					Containers: []struct {
 						ID   string `json:"id"`
+						Name string `json:"name,omitempty"`
 						Args struct {
 							Image        string            `json:"image"`
 							GPU          bool              `json:"gpu"`
@@ -104,6 +105,7 @@ func TestValidateJobSpecStruct(t *testing.T) {
 					},
 					Containers: []struct {
 						ID   string `json:"id"`
+						Name string `json:"name,omitempty"`
 						Args struct {
 							Image        string            `json:"image"`
 							GPU          bool              `json:"gpu"`

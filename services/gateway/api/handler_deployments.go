@@ -126,6 +126,11 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if err := core.AssignContainerIDs(spec); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to assign container ids: "+err.Error())
+		return
+	}
+
 	if req.HFToken != "" {
 		for i := range spec.Containers {
 			if spec.Containers[i].Args.Env == nil {
@@ -485,8 +490,18 @@ func (s *Server) handleCreateWorkload(w http.ResponseWriter, r *http.Request) {
 	// 2. Convert to Internal Provider Format
 	internalSpec := core.ConvertTemplateSpecV2ToJobSpec(&v2Spec)
 
+	if err := core.AssignContainerIDs(internalSpec); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to assign container ids: "+err.Error())
+		return
+	}
+
 	// 3. Create the Database Record to archive this deployment
 	deploymentID := fmt.Sprintf("workload-%s-%d", req.Name, time.Now().UnixMilli())
+	specBytes, err := json.Marshal(internalSpec)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to encode job spec: "+err.Error())
+		return
+	}
 	dbDeployment := models.Deployment{
 		ID:                    deploymentID,
 		OrganizationID:        organizationID,
@@ -503,7 +518,7 @@ func (s *Server) handleCreateWorkload(w http.ResponseWriter, r *http.Request) {
 		RequestsPerMinute:     req.RequestsPerMinute,
 		BurstRequests:         req.BurstRequests,
 		MaxConcurrentRequests: req.MaxConcurrentRequests,
-		JobSpecJSON:           string(req.Spec),
+		JobSpecJSON:           string(specBytes),
 	}
 
 	if err := s.DB.Create(&dbDeployment).Error; err != nil {

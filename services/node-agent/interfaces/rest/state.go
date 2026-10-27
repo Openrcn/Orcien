@@ -17,6 +17,7 @@ type RegistrationState struct {
 	mode         string // "exclusive" or "shared"
 	maxWorkloads int    // 0 means unlimited (shared mode only)
 	jobs         map[string]core.JobSpec
+	persistPath  string // when set, jobs are persisted to disk on every mutation
 }
 
 func NewRegistrationState(mode string, maxWorkloads int) *RegistrationState {
@@ -59,6 +60,7 @@ func (s *RegistrationState) Register(job core.JobSpec) error {
 		return fmt.Errorf("workload %q is already registered", key)
 	}
 	s.jobs[key] = job
+	s.persistLocked()
 	return nil
 }
 
@@ -69,6 +71,7 @@ func (s *RegistrationState) Unregister(jobName string) error {
 		return fmt.Errorf("workload %q is not registered", jobName)
 	}
 	delete(s.jobs, jobName)
+	s.persistLocked()
 	return nil
 }
 

@@ -323,7 +323,8 @@ export function useCreateWorkload() {
         if (resources.length > 0) args.resources = resources;
 
         return {
-          id: c.id || "master",
+          id: c.id || "",
+          name: c.id || "",
           args,
         };
       }),

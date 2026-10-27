@@ -100,7 +100,7 @@ export function NodeWorkloadsTab({
                     className="border-b border-[var(--border)] last:border-0"
                   >
                     <td className="py-2.5 font-medium text-[var(--text-main)]">
-                      {c.id || `container-${idx + 1}`}
+                      {c.name || c.id || `container-${idx + 1}`}
                     </td>
                     <td className="py-2.5 font-mono text-[11px] text-[var(--text-muted)]">
                       {c.args?.image || "-"}

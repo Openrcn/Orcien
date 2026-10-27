@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"orcn/core/logger"
 	"orcn/services/node-agent/agent"
@@ -55,7 +56,23 @@ func main() {
 		}, state, engine, healthStore)
 	}
 
+	// Re-adopt deployments persisted before a restart so containers are not
+	// left as orphans with no spec, routes, or health checks.
+	if cfg.StatePath != "" {
+		if err := state.LoadFromDisk(cfg.StatePath); err != nil {
+			log.Error("Ignoring persisted registration state: %v", err)
+		}
+	}
+
 	adminServer, proxyServer := restinterface.InitServers(cfg, engine, eventBuffer, telemetryBuffer, healthStore, state)
+	if cfg.StatePath != "" {
+		state.EnablePersistence(cfg.StatePath)
+		go func() {
+			recoverCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			adminServer.Recover(recoverCtx)
+		}()
+	}
 
 	// 5. Register Components into Orchestrator
 	nodeAgent := agent.New()

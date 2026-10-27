@@ -17,6 +17,7 @@ import (
 	"orcn/core/logger"
 	"orcn/models"
 	"orcn/pkg/balancer"
+	"orcn/pkg/routing"
 )
 
 var ingressLog = logger.New("INGRESS")
@@ -120,7 +121,7 @@ func (s *Server) syncRoutes() {
 	}
 
 	addNodeToRoute := func(routeName string, target routeTarget, modelID, kind string, policy AdmissionPolicy) {
-		routeKey := strings.ToLower(routeName)
+		routeKey := strings.ToLower(routing.SlugLabel(routeName))
 		if _, exists := newRoutes[routeKey]; !exists {
 			newRoutes[routeKey] = &CachedRoute{
 				Name:        routeKey,
@@ -205,7 +206,9 @@ func (s *Server) Handler() http.Handler {
 		if host == s.cfg.AppDomain {
 			matched = true
 		} else if strings.HasSuffix(host, "."+s.cfg.AppDomain) {
-			routeKey = strings.ToLower(strings.TrimSuffix(host, "."+s.cfg.AppDomain))
+			// The stored route key is DNS-slugified ("node_test" -> "node-test"),
+			// so arriving hosts must go through the same transformation.
+			routeKey = routing.SlugLabel(strings.TrimSuffix(host, "."+s.cfg.AppDomain))
 			matched = true
 		}
 
@@ -214,7 +217,7 @@ func (s *Server) Handler() http.Handler {
 			if host == "localhost" {
 				matched = true
 			} else {
-				routeKey = strings.ToLower(strings.TrimSuffix(host, ".localhost"))
+				routeKey = routing.SlugLabel(strings.TrimSuffix(host, ".localhost"))
 				matched = true
 			}
 		}

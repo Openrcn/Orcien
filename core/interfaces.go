@@ -25,7 +25,8 @@ type VolumeSpec struct {
 }
 
 type ContainerSpec struct {
-	ID   string        `json:"id"`
+	ID string `json:"id"`
+	Name string        `json:"name,omitempty"`
 	Args ContainerArgs `json:"args"`
 }
 
@@ -97,10 +98,6 @@ const (
 	TaskEmbedding      ModelTask = "embedding"
 	TaskScore          ModelTask = "score"
 	TaskMultimodal     ModelTask = "multimodal"
-	// TaskDecision is a generic classification/decision task owned by orcn
-	// (typed classification, routing, guardrail-style models). Runtimes map
-	// it to their native equivalent: HF text-classification for vLLM,
-	// the decision library tag for Ollama.
 	TaskDecision ModelTask = "decision"
 )
 

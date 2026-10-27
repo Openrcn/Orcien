@@ -21,8 +21,11 @@ type Config struct {
 	RegistryCredential    string
 	RegistryServerAddress string
 	ResourceLoaderImage   string
-	AgentMode             string        // "exclusive" or "shared"
-	MaxWorkloadCount      int           // 0 means unlimited (shared mode only)
+	AgentMode             string // "exclusive" or "shared"
+	MaxWorkloadCount      int    // 0 means unlimited (shared mode only)
+	// StatePath is where registered JobSpecs are persisted so they can be
+	// re-adopted after a restart. Empty disables persistence.
+	StatePath                   string
 	TelemetryEnabled            bool          // whether background telemetry sampler is active
 	TelemetryInterval           time.Duration // sampling interval (e.g. 5s)
 	TelemetryBufferPoints       int           // max sample points retained in ring buffer (e.g. 60 = 5 min at 5s)
@@ -49,6 +52,7 @@ func Load() Config {
 		ResourceLoaderImage:         env("NODE_AGENT_RESOURCE_LOADER_IMAGE", "vinitngr/orcn-resource-loader:dev"),
 		AgentMode:                   env("AGENT_MODE", "exclusive"),
 		MaxWorkloadCount:            envInt("MAX_WORKLOAD_COUNT", 0),
+		StatePath:                   env("NODE_AGENT_STATE_PATH", "data/node-agent-jobs.json"),
 		TelemetryEnabled:            envBool("NODE_AGENT_TELEMETRY_ENABLED", true),
 		TelemetryInterval:           envDuration("NODE_AGENT_TELEMETRY_INTERVAL", 5*time.Second),
 		TelemetryBufferPoints:       envInt("NODE_AGENT_TELEMETRY_BUFFER_POINTS", 60),

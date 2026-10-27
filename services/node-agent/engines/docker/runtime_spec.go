@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	containertypes "github.com/docker/docker/api/types/container"
@@ -110,11 +111,9 @@ func containerConfig(spec ContainerConfig) *containertypes.Config {
 }
 
 func hostConfig(spec ContainerConfig) *containertypes.HostConfig {
-	// Workload ports are reached through the node-agent proxy. Do not publish
-	// them on the host: the gateway and other workloads may already use those
-	// host ports. The proxy routes directly to the container's Docker-network IP.
+	network := workloadNetworkMode()
 	host := &containertypes.HostConfig{
-		NetworkMode: "infra_orcn-net",
+		NetworkMode: containertypes.NetworkMode(network),
 	}
 	for _, mount := range spec.VolumeMounts {
 		source := mount.Source
@@ -175,4 +174,11 @@ func ValidateConfig(spec ContainerConfig) error {
 		}
 	}
 	return nil
+}
+
+func workloadNetworkMode() string {
+	if network := strings.TrimSpace(os.Getenv("NODE_AGENT_WORKLOAD_NETWORK")); network != "" {
+		return network
+	}
+	return "bridge"
 }

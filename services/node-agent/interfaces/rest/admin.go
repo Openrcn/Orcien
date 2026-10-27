@@ -359,6 +359,32 @@ func (s *AdminServer) containerHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, c)
 }
 
+// Recover re-adopts jobs loaded from the persisted registration state after a
+// restart: it rebuilds the proxy route table and makes sure every container
+// exists and is running. Failures are logged per job; recovery never aborts.
+func (s *AdminServer) Recover(ctx context.Context) {
+	jobs := s.state.Jobs()
+	if len(jobs) == 0 {
+		return
+	}
+	s.logger.Info("Recovering %d persisted job(s)...", len(jobs))
+	for jobName, job := range jobs {
+		var lastErr error
+		for _, container := range job.Containers {
+			spec := docker.ContainerConfigFromJobWithVolumes(container, job.Volumes)
+			s.routes.Set(spec)
+			if _, _, err := s.engine.Ensure(ctx, spec, false); err != nil {
+				lastErr = err
+			}
+		}
+		if lastErr != nil {
+			s.logger.Error("Failed to fully re-adopt job %q: %v", jobName, lastErr)
+			continue
+		}
+		s.logger.Info("Re-adopted job %q (%d container(s))", jobName, len(job.Containers))
+	}
+}
+
 func (s *AdminServer) registration(w http.ResponseWriter, r *http.Request) {
 	if !s.requireRegistered(w) {
 		return

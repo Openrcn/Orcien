@@ -140,7 +140,7 @@ export function NodeOverviewTab({
   const endpoints = buildEndpoints(deployment, node);
   const shortId = shortNodeId(node.ID);
 
-  let containers: { id: string; image: string }[] = [];
+  let containers: { id: string; name: string; image: string }[] = [];
   try {
     const spec = deployment.JobSpecJSON
       ? JSON.parse(deployment.JobSpecJSON)
@@ -148,6 +148,7 @@ export function NodeOverviewTab({
     containers = Array.isArray(spec?.containers)
       ? spec.containers.map((c: any, i: number) => ({
           id: c.id || `container-${i + 1}`,
+          name: c.name || c.id || `container-${i + 1}`,
           image: c.args?.image || "-",
         }))
       : [];
@@ -322,7 +323,7 @@ export function NodeOverviewTab({
                       className={`size-2 shrink-0 rounded-full ${workloadDot}`}
                     />
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-main)]">
-                      {c.id}
+                      {c.name}
                       <span className="ml-2 truncate font-mono text-[11px] font-normal text-[var(--text-muted)]">
                         {c.image}
                       </span>

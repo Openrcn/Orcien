@@ -24,6 +24,7 @@ type TemplateSpecV2 struct {
 	} `json:"volumes"`
 	Containers []struct {
 		ID   string `json:"id"`
+		Name string `json:"name,omitempty"`
 		Args struct {
 			Image        string            `json:"image"`
 			GPU          bool              `json:"gpu"`
@@ -237,12 +238,14 @@ func ValidateJobSpecStruct(spec *TemplateSpecV2) (bool, []string) {
 	}
 
 	for i, c := range spec.Containers {
-		if c.ID == "" {
-			errors = append(errors, fmt.Sprintf("Container at index %d is missing 'id'", i))
+		// The user-facing identity is 'name'. 'id' is accepted for legacy
+		// templates and is backend-assigned at deploy time anyway.
+		if c.Name == "" && c.ID == "" {
+			errors = append(errors, fmt.Sprintf("Container at index %d is missing 'name'", i))
 		}
 
 		if c.Args.Image == "" {
-			errors = append(errors, fmt.Sprintf("Container '%s' is missing required field 'args.image'", c.ID))
+			errors = append(errors, fmt.Sprintf("Container '%s' is missing required field 'args.image'", c.Name))
 		}
 
 		// Validate Mounts
@@ -348,8 +351,13 @@ func ConvertTemplateSpecV2ToJobSpec(v2 *TemplateSpecV2) *JobSpec {
 	}
 
 	for _, c := range v2.Containers {
+		containerID := c.ID
+		if containerID == "" {
+			containerID = c.Name
+		}
 		container := ContainerSpec{
-			ID: c.ID,
+			ID:   containerID,
+			Name: c.Name,
 			Args: ContainerArgs{
 				Image:      c.Args.Image,
 				GPU:        c.Args.GPU,
