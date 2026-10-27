@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Boxes, CalendarDays, Check, Cpu, Plus, Server } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/Button";
+import { useOrgHref } from "@/lib/org";
 
 interface WorkloadTemplatePickerProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function WorkloadTemplatePicker({
   onSelect,
 }: WorkloadTemplatePickerProps) {
   const router = useRouter();
+  const orgHref = useOrgHref();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,7 +62,7 @@ export function WorkloadTemplatePicker({
             size="sm"
             onClick={() => {
               onOpenChange(false);
-              router.push("/templates/create");
+              router.push(orgHref("/templates/create"));
             }}
             className="shrink-0"
           >

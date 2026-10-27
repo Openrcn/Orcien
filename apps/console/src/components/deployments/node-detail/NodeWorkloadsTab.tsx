@@ -18,10 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  MetricTile,
-  SectionCard,
-} from "@/components/deployments/node-detail/shared";
+import { SectionCard } from "@/components/deployments/node-detail/shared";
 
 type Props = {
   deployment: any;
@@ -50,21 +47,6 @@ export function NodeWorkloadsTab({
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile
-          label="Declared Containers"
-          value={String(containers.length || "--")}
-          meta="From job spec"
-        />
-        <MetricTile
-          label="Running"
-          value="--"
-          meta="Runtime reporting pending"
-        />
-        <MetricTile label="GPU Assigned" value="--" meta="Hardware pending" />
-        <MetricTile label="Memory" value="--" meta="Allocation pending" />
-      </div>
-
       <SectionCard
         title={`Running Workloads (${containers.length || 0})`}
         subtitle="Container operations run inside this node"

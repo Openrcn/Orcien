@@ -3,19 +3,14 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
-  Cpu,
-  Database,
-  Map,
   RefreshCw,
   Search,
-  Server,
-  Wifi,
-  HardDrive,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Logo } from "@/components/ui/Logos";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { shortNodeId } from "@/components/deployments/node-detail/shared";
+import { useOrgHref } from "@/lib/org";
 import {
   Select,
   SelectContent,
@@ -24,33 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-
-function Stat({
-  label,
-  value,
-  detail,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Server;
-}) {
-  return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-          {label}
-        </span>
-        <Icon className="size-4 text-[var(--text-muted)]" />
-      </div>
-      <div className="font-heading mt-2 text-xl font-bold tracking-tight text-[var(--text-main)]">
-        {value}
-      </div>
-      <div className="mt-1 text-[11px] text-[var(--text-muted)]">{detail}</div>
-    </div>
-  );
-}
 
 function timeAgo(iso?: string): string {
   if (!iso) return "-";
@@ -104,6 +72,7 @@ export function ReplicasTab({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const orgHref = useOrgHref();
   const [nodeQuery, setNodeQuery] = useState("");
   const [nodeStatusFilter, setNodeStatusFilter] = useState(
     () => searchParams.get("status") ?? "all",
@@ -148,112 +117,23 @@ export function ReplicasTab({
     });
   }, [nodes, nodeQuery, nodeStatusFilter]);
 
-  const readyNodes = nodes.filter((n) =>
-    ["READY", "RUNNING", "HEALTHY"].includes(
-      String(n.InfraStatus).toUpperCase(),
-    ),
-  ).length;
+  /** Container count declared in the job spec — only shown when available */
+  let containerCount = 0;
+  try {
+    const spec = deployment?.JobSpecJSON
+      ? JSON.parse(deployment.JobSpecJSON)
+      : null;
+    containerCount = Array.isArray(spec?.containers) ? spec.containers.length : 0;
+  } catch {
+    containerCount = 0;
+  }
+  const hasContainerData = containerCount > 0;
+  const gridCols = hasContainerData
+    ? "grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.5fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto]"
+    : "grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto]";
 
   return (
     <div className="space-y-3">
-      {/* Stat Cards Row */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Total Assigned Nodes"
-          value={nodes.length ? String(nodes.length) : "-"}
-          detail="Deployment replicas"
-          icon={Server}
-        />
-        <Stat
-          label="Healthy Replicas"
-          value={nodes.length ? `${readyNodes} / ${nodes.length}` : "-"}
-          detail="Passing health checks"
-          icon={Wifi}
-        />
-        <Stat
-          label="Total GPU Capacity"
-          value="- / -"
-          detail="Capacity reported by nodes"
-          icon={Cpu}
-        />
-        <Stat
-          label="System Memory"
-          value="- / -"
-          detail="Allocation reported by nodes"
-          icon={Database}
-        />
-      </div>
-
-      {/* Distribution & Resource Grid */}
-      <div className="grid gap-3 lg:grid-cols-[1fr_1.3fr]">
-        {/* Node Distribution Placeholder */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-          <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-            <div className="flex items-center gap-2">
-              <Map size={14} className="text-[var(--text-muted)]" />
-              <h2 className="text-sm font-bold text-[var(--text-main)]">
-                Node Distribution
-              </h2>
-            </div>
-            <span className="text-[11px] text-[var(--text-muted)]">
-              Reserved
-            </span>
-          </div>
-          <div className="flex h-36 items-center justify-center rounded border border-dashed border-[var(--border)] bg-[var(--surface-hover)] text-center p-4">
-            <div>
-              <Map className="mx-auto size-5 text-[var(--text-muted)] opacity-40" />
-              <p className="mt-2 text-xs font-medium text-[var(--text-muted)]">
-                Topology data reserved
-              </p>
-              <p className="mt-1 text-[10px] text-[var(--text-muted)] opacity-70">
-                Geographic routing connects when backend telemetry is live.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Aggregate Hardware Capacity */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-          <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--text-main)]">
-                Aggregate Hardware Capacity
-              </h2>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                Combined replica utilization
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-hover)] p-3">
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <Cpu size={14} /> GPU Utilization
-                </span>
-                <span className="font-mono">-</span>
-              </div>
-              <div className="mt-2 text-base font-semibold text-[var(--text-main)]">
-                - / -
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-hover)]" />
-            </div>
-
-            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-hover)] p-3">
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <HardDrive size={14} /> VRAM Allocated
-                </span>
-                <span className="font-mono">-</span>
-              </div>
-              <div className="mt-2 text-base font-semibold text-[var(--text-main)]">
-                - / -
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-hover)]" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Nodes Section */}
       <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card-bg)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4">
@@ -314,7 +194,7 @@ export function ReplicasTab({
         </div>
 
         <div className="overflow-x-auto">
-          <div className="min-w-[1180px] divide-y divide-[var(--border)]">
+          <div className="min-w-[860px] divide-y divide-[var(--border)]">
             {filteredNodes.length === 0 ? (
               <div className="px-4 py-14 text-center text-xs text-[var(--text-muted)]">
                 {nodes.length === 0
@@ -341,10 +221,10 @@ export function ReplicasTab({
                     onClick={() =>
                       deployment?.ID &&
                       router.push(
-                        `/deployments/${deployment.ID}/nodes/${node.ID}`,
+                        orgHref(`/deployments/${deployment.ID}/nodes/${node.ID}`),
                       )
                     }
-                    className="grid cursor-pointer grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] items-start gap-6 px-5 py-6 transition-colors duration-200 hover:bg-[var(--surface-hover)]"
+                    className={`grid cursor-pointer ${gridCols} items-start gap-6 px-5 py-6 transition-colors duration-200 hover:bg-[var(--surface-hover)]`}
                   >
                     {/* Node identity */}
                     <div className="min-w-0">
@@ -404,36 +284,25 @@ export function ReplicasTab({
                         </div>
                       </div>
                     </div>
-                    {/* GPU placeholder */}
-                    <div
-                      className="min-w-0"
-                      title="GPU telemetry not reported yet"
-                    >
-                      <div className="text-[11px] font-medium text-[var(--text-muted)]">
-                        GPU
+                    {/* Containers running */}
+                    {hasContainerData ? (
+                      <div
+                        className="min-w-0"
+                        title="Running containers from the job spec"
+                      >
+                        <div className="text-[11px] font-medium text-[var(--text-muted)]">
+                          Containers
+                        </div>
+                        <div className="mt-2 whitespace-nowrap text-sm font-bold text-[var(--text-main)]">
+                          {live
+                            ? `${containerCount} / ${containerCount}`
+                            : `0 / ${containerCount}`}
+                        </div>
+                        <div className="mt-3 text-[11px] text-[var(--text-light)]">
+                          {live ? "All running" : "Not running"}
+                        </div>
                       </div>
-                      <div className="mt-2 truncate text-sm font-bold text-[var(--text-light)]">
-                        {node.GpuSpec || "--"}
-                      </div>
-                      <div className="mt-3 text-[11px] text-[var(--text-light)]">
-                        Pending telemetry
-                      </div>
-                    </div>
-                    {/* GPU memory placeholder */}
-                    <div
-                      className="min-w-0"
-                      title="GPU memory telemetry not reported yet"
-                    >
-                      <div className="text-[11px] font-medium text-[var(--text-muted)]">
-                        GPU Memory
-                      </div>
-                      <div className="mt-2 truncate text-sm font-bold text-[var(--text-light)]">
-                        {node.GpuMemory || "--"}
-                      </div>
-                      <div className="mt-3 text-[11px] text-[var(--text-light)]">
-                        Pending telemetry
-                      </div>
-                    </div>
+                    ) : null}
                     {/* Infra status */}
                     <div className="min-w-0">
                       <div className="text-[11px] font-medium text-[var(--text-muted)]">

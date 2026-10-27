@@ -1,6 +1,7 @@
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 
 export function BasicConfig({ data, updateData }: any) {
   const [registries, setRegistries] = useState<any[]>([]);
@@ -14,7 +15,7 @@ export function BasicConfig({ data, updateData }: any) {
 
   const handleCreateRegistry = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/registries", {
+      const res = await apiFetch("/api/v1/registries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReg),
@@ -35,7 +36,7 @@ export function BasicConfig({ data, updateData }: any) {
   };
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/v1/registries")
+    apiFetch("/api/v1/registries")
       .then((res) => res.json())
       .then((data) => setRegistries(data || []))
       .catch((e) => console.error(e));

@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api";
+
 export interface ArrayItemSchema {
   type: "object" | "string" | "number" | "boolean";
   properties?: Record<string, { type: string; label?: string; placeholder?: string }>;
@@ -74,7 +76,7 @@ async function parse<T>(res: Response): Promise<T> {
 }
 
 export async function fetchProviders(): Promise<ProviderCapability[]> {
-  const res = await fetch("/api/v1/providers");
+  const res = await apiFetch("/api/v1/providers");
   const data = await parse<{ providers?: ProviderCapability[] }>(res);
   return data.providers || [];
 }

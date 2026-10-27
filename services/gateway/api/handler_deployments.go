@@ -60,7 +60,7 @@ func (s *Server) resolveDeploymentRoute(r *http.Request, name string) (string, s
 		}
 		return "", "", err
 	}
-	routeKey, err := routing.DeploymentRouteKey(name, organization.Name)
+	routeKey, err := routing.DeploymentRouteKey(name, organization.Slug)
 	if err != nil {
 		return "", "", err
 	}

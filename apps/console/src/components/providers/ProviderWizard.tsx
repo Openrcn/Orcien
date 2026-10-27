@@ -22,6 +22,7 @@ import {
 } from "./api";
 import { ProviderFieldInput } from "./ProviderFieldInput";
 import { JsonArrayInput } from "./JsonArrayInput";
+import { useOrgHref } from "@/lib/org";
 
 const STEPS = ["Provider", "Configuration", "Complete"];
 
@@ -33,6 +34,7 @@ interface Props {
 
 export function ProviderWizard({ connectionId }: Props) {
   const router = useRouter();
+  const orgHref = useOrgHref();
   const isEdit = Boolean(connectionId);
 
   const [providers, setProviders] = useState<ProviderCapability[]>([]);
@@ -222,7 +224,7 @@ export function ProviderWizard({ connectionId }: Props) {
       <div className="flex items-center gap-1.5 text-xs text-[var(--text-light)]">
         <button
           type="button"
-          onClick={() => router.push("/providers")}
+          onClick={() => router.push(orgHref("/providers"))}
           className="transition-colors hover:text-[var(--dm-text-3)]"
         >
           Providers
@@ -237,7 +239,7 @@ export function ProviderWizard({ connectionId }: Props) {
         <button
           type="button"
           onClick={() =>
-            step > 1 && !busy ? setStep(step - 1) : router.push("/providers")
+            step > 1 && !busy ? setStep(step - 1) : router.push(orgHref("/providers"))
           }
           disabled={busy}
           title={step > 1 ? "Back" : "Back to providers"}
@@ -424,7 +426,7 @@ export function ProviderWizard({ connectionId }: Props) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => (isEdit ? router.push("/providers") : setStep(1))}
+              onClick={() => (isEdit ? router.push(orgHref("/providers")) : setStep(1))}
               disabled={busy}
             >
               <ArrowLeft className="size-3.5" /> Back
@@ -473,7 +475,7 @@ export function ProviderWizard({ connectionId }: Props) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => router.push("/providers")}
+              onClick={() => router.push(orgHref("/providers"))}
             >
               Done
             </Button>

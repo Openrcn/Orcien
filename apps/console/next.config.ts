@@ -7,13 +7,8 @@ const nextConfig: NextConfig = {
     // error in next dev (vercel/next.js#86060).
     return [
       {
-        source: "/",
-        destination: "/deployments",
-        permanent: false,
-      },
-      {
         source: "/dashboard",
-        destination: "/deployments",
+        destination: "/",
         permanent: false,
       },
     ];

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useOrgHref, useOrg } from "@/lib/org";
 import {
   LayoutGrid,
   Sparkles,
@@ -15,6 +16,10 @@ import {
 
 export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
   const pathname = usePathname();
+  const { slug } = useOrg();
+  const orgHref = useOrgHref();
+  // Org-scoped prefix for activity matching (e.g. "/acme").
+  const base = slug ? `/${slug}` : "";
   const width = isCollapsed ? 72 : 240;
   const [isDark, setIsDark] = useState(false);
 
@@ -153,9 +158,12 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
         </div>
 
         <Link
-          href="/deployments"
+          href={orgHref("/deployments")}
           style={navItemStyle(
-            pathname.startsWith("/deployments") || pathname === "/",
+            base
+              ? pathname.startsWith(`${base}/deployments`) ||
+                  pathname === `${base}/`
+              : pathname.startsWith("/deployments") || pathname === "/",
           )}
         >
           <LayoutGrid size={18} strokeWidth={2.2} />
@@ -164,8 +172,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
           )}
         </Link>
         <Link
-          href="/models"
-          style={navItemStyle(pathname.startsWith("/models"))}
+          href={orgHref("/models")}
+          style={navItemStyle(pathname.startsWith(`${base}/models`))}
         >
           <Sparkles size={18} strokeWidth={2.2} />
           {!isCollapsed && (
@@ -195,8 +203,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
         </div>
 
         <Link
-          href="/providers"
-          style={navItemStyle(pathname.startsWith("/providers"))}
+          href={orgHref("/providers")}
+          style={navItemStyle(pathname.startsWith(`${base}/providers`))}
         >
           <Cloud size={18} strokeWidth={2.2} />
           {!isCollapsed && (
@@ -205,8 +213,8 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
         </Link>
 
         <Link
-          href="/templates"
-          style={navItemStyle(pathname.startsWith("/templates"))}
+          href={orgHref("/templates")}
+          style={navItemStyle(pathname.startsWith(`${base}/templates`))}
         >
           <Blocks size={18} strokeWidth={2.2} />
           {!isCollapsed && (

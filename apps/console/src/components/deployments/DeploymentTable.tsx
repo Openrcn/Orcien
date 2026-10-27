@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { useOrgHref } from "@/lib/org";
 import {
   Select,
   SelectContent,
@@ -177,6 +179,7 @@ function FilterSelect({
 
 export function DeploymentTable() {
   const router = useRouter();
+  const orgHref = useOrgHref();
   const [statusFilter, setStatusFilter] = useState("all");
   const [providerFilter, setProviderFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -263,7 +266,7 @@ export function DeploymentTable() {
   }, [deployments]);
 
   useEffect(() => {
-    fetch("/api/v1/deployments")
+    apiFetch("/api/v1/deployments")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data))
@@ -486,7 +489,7 @@ export function DeploymentTable() {
                   return (
                   <div
                     key={deployment.id}
-                    onClick={() => router.push(`/deployments/${deployment.id}`)}
+                    onClick={() => router.push(orgHref(`/deployments/${deployment.id}`))}
                     className="group grid cursor-pointer grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.8fr)_auto] items-center gap-5 px-5 py-5 transition-colors duration-200 hover:bg-[var(--surface-hover)]"
                   >
                     {/* Deployment: logo + name | status over id */}
@@ -645,7 +648,7 @@ export function DeploymentTable() {
                           <DropdownMenuGroup>
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push(`/deployments/${deployment.id}`)
+                                router.push(orgHref(`/deployments/${deployment.id}`))
                               }
                             >
                               <Eye />

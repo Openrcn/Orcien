@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrgProvider } from "@/lib/org";
 
 export const metadata: Metadata = {
   title: "ORCN | Deployments",
@@ -31,7 +32,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body suppressHydrationWarning>
-        <AppShell>{children}</AppShell>
+        <OrgProvider>
+          <AppShell>{children}</AppShell>
+        </OrgProvider>
       </body>
     </html>
   );

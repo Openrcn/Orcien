@@ -44,10 +44,15 @@ func InitDB(filepath string) (*gorm.DB, error) {
 	// Ensure default organization exists
 	defaultOrg := Organization{
 		ID:          "00000000-0000-0000-0000-000000000001",
+		Slug:        "default",
 		Name:        "default",
 		Description: "Default organization for single-tenant mode",
 	}
 	db.FirstOrCreate(&defaultOrg, Organization{ID: defaultOrg.ID})
+
+	if err := migrateOrganizationSlugs(db); err != nil {
+		return nil, err
+	}
 
 	if err := migrateDeploymentRouteIdentity(db); err != nil {
 		return nil, err
@@ -58,6 +63,40 @@ func InitDB(filepath string) (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+// migrateOrganizationSlugs backfills the immutable slug for organizations
+// created before the column existed and removes the legacy Name unique index
+// (Name is no longer unique; Slug is the tenant key).
+func migrateOrganizationSlugs(db *gorm.DB) error {
+	// GORM used this conventional name for the former Name uniqueIndex. It
+	// must be removed so separate organizations can share a display name.
+	if db.Migrator().HasIndex(&Organization{}, "idx_organizations_name") {
+		if err := db.Migrator().DropIndex(&Organization{}, "idx_organizations_name"); err != nil {
+			return err
+		}
+	}
+
+	var orgs []Organization
+	if err := db.Where("slug IS NULL OR slug = ''").Find(&orgs).Error; err != nil {
+		return err
+	}
+	for _, org := range orgs {
+		slug := routing.SlugLabel(org.Name)
+		if slug == "" {
+			slug = "org"
+		}
+		// Slug must be unique: disambiguate deterministic collisions.
+		var count int64
+		db.Model(&Organization{}).Where("slug = ? AND id <> ?", slug, org.ID).Count(&count)
+		if count > 0 {
+			slug = fmt.Sprintf("%s-%s", slug, org.ID[:8])
+		}
+		if err := db.Model(&Organization{}).Where("id = ?", org.ID).Update("slug", slug).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // migrateDeploymentRouteIdentity transitions deployments from a global name to

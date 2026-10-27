@@ -65,14 +65,18 @@ export function SectionCard({
   subtitle,
   action,
   children,
+  className,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
+    <div
+      className={`rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4 ${className || ""}`}
+    >
       <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
         <div>
           <h2 className="text-sm font-bold text-[var(--text-main)]">{title}</h2>

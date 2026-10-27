@@ -1,23 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  Activity,
   Boxes,
   ExternalLink,
-  Gauge,
-  HardDrive,
   Link2,
   Server,
-  Terminal,
 } from "lucide-react";
-import Link from "next/link";
-
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Logo } from "@/components/ui/Logos";
 import { InfoRow } from "@/components/deployments/detail/InfoRow";
 import {
-  ChartPlaceholder,
   MetricTile,
   SectionCard,
   shortNodeId,
@@ -208,7 +201,7 @@ export function NodeOverviewTab({
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_1.3fr]">
+      <div className="grid gap-3 lg:grid-cols-2">
         <SectionCard
           title="Node Information"
           subtitle="Identity and runtime details"
@@ -267,32 +260,11 @@ export function NodeOverviewTab({
           <InfoRow label="Last Updated" value={updatedAt} />
         </SectionCard>
 
-        <div className="space-y-3">
-          <SectionCard
-            title="Resource Utilization"
-            subtitle="Live capacity graphs"
-            action={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenTab("metrics")}
-              >
-                View metrics
-              </Button>
-            }
-          >
-            <div className="grid gap-2 sm:grid-cols-2">
-              <ChartPlaceholder label="GPU Utilization" icon={Gauge} tall />
-              <ChartPlaceholder label="GPU Memory" icon={HardDrive} tall />
-              <ChartPlaceholder label="CPU Utilization" icon={Activity} />
-              <ChartPlaceholder label="System Memory" icon={Activity} />
-              <ChartPlaceholder label="Disk Usage" icon={HardDrive} />
-            </div>
-          </SectionCard>
-
+        <div className="flex h-full flex-col gap-3">
           <SectionCard
             title={`Running Workloads (${containers.length})`}
             subtitle="Containers on this node"
+            className="flex flex-1 flex-col"
             action={
               <Button
                 variant="ghost"
@@ -304,15 +276,17 @@ export function NodeOverviewTab({
             }
           >
             {containers.length === 0 ? (
-              <div className="rounded border border-dashed border-[var(--border)] px-3 py-6 text-center">
-                <Boxes className="mx-auto size-4 text-[var(--text-muted)] opacity-50" />
-                <p className="mt-2 text-xs font-medium text-[var(--text-muted)]">
-                  No containers on this node
-                </p>
+              <div className="flex flex-1 items-center justify-center rounded border border-dashed border-[var(--border)] px-3 py-6 text-center">
+                <div>
+                  <Boxes className="mx-auto size-4 text-[var(--text-muted)] opacity-50" />
+                  <p className="mt-2 text-xs font-medium text-[var(--text-muted)]">
+                    No containers on this node
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {containers.slice(0, 4).map((c) => (
+              <div className="flex-1 divide-y divide-[var(--border)]">
+                {containers.slice(0, 8).map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -339,151 +313,70 @@ export function NodeOverviewTab({
                     </span>
                   </button>
                 ))}
-                {containers.length > 4 && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenTab("workloads")}
-                    className="w-full px-1 py-1.5 text-left text-[11px] font-medium text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
+                 {containers.length > 8 && (
+                   <button
+                     type="button"
+                     onClick={() => onOpenTab("workloads")}
+                     className="w-full px-1 py-1.5 text-left text-[11px] font-medium text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
+                   >
+                     +{containers.length - 8} more
+                   </button>
+                 )}
+              </div>
+             )}
+          </SectionCard>
+
+          <SectionCard
+            title="Endpoints"
+            subtitle="Direct access for this node"
+            action={
+              <span className="rounded bg-[var(--surface-hover)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+                {endpoints.length}
+              </span>
+            }
+          >
+            {endpoints.length === 0 ? (
+              <div className="rounded border border-dashed border-[var(--border)] px-3 py-4 text-center text-[11px] text-[var(--text-muted)]">
+                No endpoints resolved yet. They appear when the node is ready.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {endpoints.map((ep, idx) => (
+                  <div
+                    key={`${ep.url}-${idx}`}
+                    className="flex items-center justify-between gap-3 rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2"
                   >
-                    +{containers.length - 4} more
-                  </button>
-                )}
+                    <div className="flex min-w-0 items-center gap-2 text-[11px]">
+                      <Link2
+                        size={12}
+                        className="shrink-0 text-[var(--text-muted)]"
+                      />
+                      <span className="font-mono text-[var(--text-main)]">
+                        :{ep.port}
+                      </span>
+                      <span className="truncate font-mono text-[var(--text-muted)]">
+                        {ep.url}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <a
+                        href={ep.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg)] hover:text-[var(--text-main)]"
+                        title="Open endpoint"
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                      <CopyButton value={ep.url} size={12} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </SectionCard>
         </div>
       </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <SectionCard
-          title="Endpoints"
-          subtitle="Direct access for this node"
-          action={
-            <span className="rounded bg-[var(--surface-hover)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
-              {endpoints.length}
-            </span>
-          }
-        >
-          {endpoints.length === 0 ? (
-            <div className="rounded border border-dashed border-[var(--border)] px-3 py-4 text-center text-[11px] text-[var(--text-muted)]">
-              No endpoints resolved yet. They appear when the node is ready.
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {endpoints.slice(0, 4).map((ep, idx) => (
-                <div
-                  key={`${ep.url}-${idx}`}
-                  className="flex items-center justify-between gap-3 rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-2 text-[11px]">
-                    <Link2
-                      size={12}
-                      className="shrink-0 text-[var(--text-muted)]"
-                    />
-                    <span className="font-mono text-[var(--text-main)]">
-                      :{ep.port}
-                    </span>
-                    <span className="truncate font-mono text-[var(--text-muted)]">
-                      {ep.url}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <a
-                      href={ep.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg)] hover:text-[var(--text-main)]"
-                      title="Open endpoint"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                    <CopyButton value={ep.url} size={12} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Recent Logs"
-          subtitle="Stdout / stderr preview"
-          action={
-            <Button variant="ghost" size="sm" onClick={() => onOpenTab("logs")}>
-              Open logs
-            </Button>
-          }
-        >
-          <div className="space-y-1.5">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-[11px] text-[var(--text-muted)]"
-              >
-                <span className="rounded bg-[var(--card-bg)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider">
-                  INFO
-                </span>
-                <span className="truncate">
-                  Waiting for log stream event #{i}
-                </span>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      </div>
-
-      <SectionCard title="Quick Actions" subtitle="Jump to related views">
-        <div className="grid gap-2 sm:grid-cols-3">
-          {[
-            {
-              tab: "events",
-              icon: Activity,
-              label: "Events",
-              sub: "Lifecycle & health events",
-            },
-            {
-              tab: "logs",
-              icon: Terminal,
-              label: "Logs",
-              sub: "Live container output",
-            },
-            {
-              tab: "workloads",
-              icon: Boxes,
-              label: "Workloads",
-              sub: "Running containers",
-            },
-          ].map(({ tab, icon: Icon, label, sub }) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => onOpenTab(tab)}
-              className="flex items-center gap-2.5 rounded border border-[var(--border)] bg-[var(--surface-hover)] p-2.5 text-left transition hover:border-[var(--border-hover)]"
-            >
-              <div className="flex size-7 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-muted)]">
-                <Icon size={13} />
-              </div>
-              <div className="min-w-0">
-                <span className="block text-xs font-semibold text-[var(--text-main)]">
-                  {label}
-                </span>
-                <span className="block truncate text-[11px] text-[var(--text-muted)]">
-                  {sub}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-        <div className="mt-2">
-          <Link
-            href={`/deployments/${deployment.ID}`}
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
-          >
-            Back to deployment
-            <ExternalLink size={11} />
-          </Link>
-        </div>
-      </SectionCard>
     </div>
   );
 }

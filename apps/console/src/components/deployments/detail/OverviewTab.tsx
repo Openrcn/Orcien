@@ -1,15 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import {
-  Activity,
   ArrowUpRight,
   Boxes,
   ExternalLink,
-  Gauge,
   Globe,
-  Server,
-  Terminal,
-  Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +12,7 @@ import { InfoRow } from "@/components/deployments/detail/InfoRow";
 import { Logo, getLogoCategory } from "@/components/ui/Logos";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { getDerivedDeploymentStatus } from "@/lib/deployment-status";
+import { useOrgHref } from "@/lib/org";
 
 type OverviewTabProps = {
   deployment: any;
@@ -55,24 +51,6 @@ function MetricTile({
       </div>
       <div className="mt-1 text-[11px] text-[var(--text-muted)]">{meta}</div>
     </button>
-  );
-}
-
-function Placeholder({
-  label,
-  icon: Icon,
-}: {
-  label: string;
-  icon: typeof Gauge;
-}) {
-  return (
-    <div className="rounded border border-[var(--border)] bg-[var(--card-bg)] p-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-muted)]">
-        <Icon className="size-3" />
-        {label}
-      </div>
-      <div className="mt-2 h-8 rounded bg-[var(--surface-hover)]" />
-    </div>
   );
 }
 
@@ -118,6 +96,7 @@ export function OverviewTab({
   onOpenTab,
   statusVariant,
 }: OverviewTabProps) {
+  const orgHref = useOrgHref();
   const createdAt = deployment.CreatedAt
     ? new Date(deployment.CreatedAt).toLocaleString()
     : "-";
@@ -155,16 +134,16 @@ export function OverviewTab({
       {/* Stat Cards */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
-          label="Requests (24h)"
-          value="--"
-          meta="Telemetry pending"
-          onClick={() => onOpenTab("metrics")}
+          label="Replicas"
+          value={nodes.length ? String(healthyNodes) : "--"}
+          meta={nodes.length ? `Healthy of ${nodes.length}` : "No nodes yet"}
+          onClick={() => onOpenTab("replicas")}
         />
         <MetricTile
-          label="Avg Latency"
-          value="--"
-          meta="Live sampling"
-          onClick={() => onOpenTab("metrics")}
+          label="Ports"
+          value={specPorts.length ? String(specPorts.length) : "--"}
+          meta={specPorts.length ? "Exposed in spec" : "No ports declared"}
+          onClick={() => onOpenTab("configuration")}
         />
         <MetricTile
           label="Healthy Replicas"
@@ -180,7 +159,7 @@ export function OverviewTab({
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_1.3fr]">
+      <div className="grid gap-3 lg:grid-cols-2">
         {/* Deployment Info */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
           <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
@@ -255,36 +234,9 @@ export function OverviewTab({
         </div>
 
         {/* Right column */}
-        <div className="space-y-3">
-          {/* Resource Telemetry */}
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-            <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--text-main)]">
-                  Resource Telemetry
-                </h2>
-                <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                  Live capacity graphs
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenTab("metrics")}
-              >
-                View metrics
-              </Button>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Placeholder label="GPU Utilization" icon={Gauge} />
-              <Placeholder label="GPU Memory" icon={Gauge} />
-              <Placeholder label="CPU Utilization" icon={Activity} />
-              <Placeholder label="System Memory" icon={Activity} />
-            </div>
-          </div>
-
+        <div className="flex h-full flex-col gap-3">
           {/* Active Nodes Preview */}
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4 flex flex-col overflow-y-auto flex-1 max-h-[calc(100vh_56px_3rem_1.5rem)]">
+          <div className="flex flex-1 flex-col rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
             <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
               <div>
                 <h2 className="text-sm font-bold text-[var(--text-main)]">
@@ -302,14 +254,14 @@ export function OverviewTab({
                 View all
               </Button>
             </div>
-            <div className="flex-1 space-y-1.5 overflow-y-auto">
+            <div className="flex-1 space-y-1.5">
               {nodes.length === 0 ? (
                 <div className="rounded border border-dashed border-[var(--border)] p-3 text-center text-xs text-[var(--text-muted)]">
                   Nodes will appear when registered.
                 </div>
               ) : (
-                <div className="grid gap-1">
-                  {nodes.slice(0, 2).map((node: any) => (
+                <div className="grid content-start gap-1">
+                  {nodes.slice(0, 8).map((node: any) => (
                     <div
                       key={node.ID}
                       className="flex items-center justify-between rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-xs"
@@ -342,7 +294,7 @@ export function OverviewTab({
                       <div className="flex items-center gap-1">
                         <CopyButton value={node.ID} size={12} />
                         <Link
-                          href={`/deployments/${deployment.ID}/nodes/${node.ID}`}
+                          href={orgHref(`/deployments/${deployment.ID}/nodes/${node.ID}`)}
                           className="rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg)] hover:text-[var(--text-main)]"
                           title="Open node details"
                         >
@@ -351,14 +303,14 @@ export function OverviewTab({
                       </div>
                     </div>
                   ))}
-                  {nodes.length > 2 && (
+                  {nodes.length > 8 && (
                     <div key="extra-nodes">
                       <button
                         type="button"
                         className="flex w-full items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-hover)] p-2.5 text-left transition hover:border-[var(--border-hover)]"
                       >
                         <span className="text-[11px] font-medium text-[var(--text-main)]">
-                          +{nodes.length - 2} more
+                          +{nodes.length - 8} more
                         </span>
                       </button>
                     </div>
@@ -367,13 +319,9 @@ export function OverviewTab({
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Endpoints + Quick Actions side by side */}
-      <div className="grid items-start gap-3 lg:grid-cols-[1fr_1.3fr]">
-      {/* Endpoints — reserved gateway URL per declared port */}
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
+          {/* Endpoints — reserved gateway URL per declared port */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
         <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
           <div className="flex items-center gap-2">
             <Globe size={14} className="text-[var(--text-muted)]" />
@@ -464,27 +412,9 @@ export function OverviewTab({
             No ports declared in the job spec yet.
           </div>
         )}
-      </div>
-
-      {/* Events placeholder */}
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-        <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-          <div>
-            <h2 className="text-sm font-bold text-[var(--text-main)]">
-              Events
-            </h2>
-          </div>
-          <span className="text-[11px] text-[var(--text-muted)]">
-            Live container output
-          </span>
-        </div>
-        <div className="space-y-1.5 p-3">
-          <div className="rounded border border-dashed border-[var(--border)] px-3 py-3 text-center text-[11px] text-[var(--text-muted)]">
-            Events will appear here when the node is running.
           </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }

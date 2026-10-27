@@ -8,7 +8,8 @@ import (
 
 type Organization struct {
 	ID          string         `gorm:"primaryKey"`
-	Name        string         `gorm:"not null;uniqueIndex"`
+	Slug        string         `gorm:"uniqueIndex"`
+	Name        string         `gorm:"not null"`
 	Description string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

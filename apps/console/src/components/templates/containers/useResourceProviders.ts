@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResourceProvider } from "./types";
+import { apiFetch } from "@/lib/api";
 
 export function useResourceProviders() {
   const [providers, setProviders] = useState<ResourceProvider[]>([]);
@@ -10,7 +11,7 @@ export function useResourceProviders() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch("/api/v1/resource-providers")
+    apiFetch("/api/v1/resource-providers")
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) {

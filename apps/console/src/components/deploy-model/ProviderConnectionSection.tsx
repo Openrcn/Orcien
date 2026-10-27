@@ -16,6 +16,7 @@ import {
   type ProviderConnection,
   providerLabel,
 } from "@/components/providers/api";
+import { useOrgHref } from "@/lib/org";
 
 const PER_PAGE = 2;
 
@@ -41,6 +42,7 @@ export function ProviderConnectionSection({
   onSelect,
 }: Props) {
   const [page, setPage] = useState(0);
+  const orgHref = useOrgHref();
 
   const pageCount = Math.max(1, Math.ceil(connections.length / PER_PAGE));
   const current = Math.min(page, pageCount - 1);
@@ -111,7 +113,7 @@ export function ProviderConnectionSection({
         </div>
       ) : connections.length === 0 ? (
         <Link
-          href="/providers/new"
+          href={orgHref("/providers/new")}
           className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--border-hover)] bg-[var(--dm-card)]/50 px-4 py-4 transition hover:border-blue-500/70 hover:bg-[var(--dm-card)]"
         >
           <span className="flex size-9 items-center justify-center rounded-lg border border-[var(--dm-divider)] bg-[var(--dm-inset)] text-[var(--text-muted)]">

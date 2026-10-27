@@ -21,8 +21,22 @@ export function apiOrigin(): string {
   return `${protocol}//${window.location.host}`;
 }
 
+import { getOrgSnapshot } from "./org-store";
+
 /** Builds a WebSocket URL for a gateway path (e.g. "/api/v1/..."). */
 export function wsUrl(path: string): string {
   const origin = apiOrigin().replace(/^http/, "ws");
   return `${origin}${path}`;
+}
+
+/**
+ * Drop-in fetch that scopes the request to the organization in the current
+ * URL by attaching `X-Organization-ID` (the gateway's default org fallback
+ * applies when the org has not been resolved yet).
+ */
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const org = getOrgSnapshot();
+  const headers = new Headers(init?.headers);
+  if (org.org?.ID) headers.set("X-Organization-ID", org.org.ID);
+  return fetch(path, { ...init, headers });
 }

@@ -13,6 +13,7 @@ import ProviderConnectionSection from "./ProviderConnectionSection";
 import ComputeFiltersSection from "./ComputeFiltersSection";
 import ComputeInstancesList from "./ComputeInstancesList";
 import ComputeProviderConfigSection from "./ComputeProviderConfigSection";
+import { apiFetch } from "@/lib/api";
 
 interface ComputePanelProps {
   selectedProvider: string;
@@ -55,7 +56,7 @@ export function ComputePanel({
 
   // Fetch dynamic providers list from backend
   useEffect(() => {
-    fetch("/api/v1/providers")
+    apiFetch("/api/v1/providers")
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data.providers)) {

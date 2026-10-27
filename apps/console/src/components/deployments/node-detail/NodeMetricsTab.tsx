@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Cpu, Database, HardDrive } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import {
   MetricTile,
   SectionCard,
@@ -196,7 +197,7 @@ export function NodeMetricsTab({
 
     const poll = async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/v1/deployments/${deploymentId}/nodes/${nodeId}/metrics`,
         );
         if (!res.ok) {
