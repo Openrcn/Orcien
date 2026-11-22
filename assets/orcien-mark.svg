@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 331 295" role="img" aria-label="Orcien mark">
+  <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="240" y1="60" x2="80" y2="240">
+    <stop stop-color="#d4f98a"/>
+    <stop offset="1" stop-color="#8fe02f"/>
+  </linearGradient>
+  <rect width="331" height="295" fill="#1a1c1a"/>
+  <circle cx="170" cy="147" r="85" fill="none" stroke="url(#g)" stroke-width="34"
+          stroke-dasharray="400.5 534" transform="rotate(180 170 147)"/>
+  <path fill="url(#g)" d="M102 147h68v68h-34v-34h-34zM68 181h34v34h34v34H68z"/>
+</svg>

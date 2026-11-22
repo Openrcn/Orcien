@@ -49,3 +49,6 @@ scripts
 orcn.db
 TODO.txt
 TODO.ingress.txt
+
+# raw demo media (GIF in assets/ is the committed version)
+assets/orcien_deploy_model.mp4

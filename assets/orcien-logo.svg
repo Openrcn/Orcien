@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" role="img" aria-label="Orcien">
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="240" y1="60" x2="80" y2="240">
+      <stop stop-color="#d4f98a"/>
+      <stop offset="1" stop-color="#8fe02f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark lockup card so the mark reads on light and dark themes -->
+  <rect width="760" height="300" rx="44" fill="#1a1c1a"/>
+
+  <!-- Mark -->
+  <g transform="translate(38 42) scale(0.72)">
+    <circle cx="170" cy="147" r="85" fill="none" stroke="url(#g)" stroke-width="34"
+            stroke-dasharray="400.5 534" transform="rotate(180 170 147)"/>
+    <path fill="url(#g)" d="M102 147h68v68h-34v-34h-34zM68 181h34v34h34v34H68z"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="318" y="186" fill="#f4f7ef"
+        font-family="'Space Grotesk','Inter','Helvetica Neue',Arial,sans-serif"
+        font-size="118" font-weight="600" letter-spacing="-3">Orcien</text>
+</svg>
