@@ -17,6 +17,6 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=build /out/gateway /usr/local/bin/gateway
 
-EXPOSE 8080 8081
+EXPOSE 27100
 
 ENTRYPOINT ["/usr/local/bin/gateway"]

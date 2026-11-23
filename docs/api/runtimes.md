@@ -9,7 +9,7 @@ Returns every runtime registered in the gateway together with the model tasks (m
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/runtimes"
+curl -X GET "http://localhost:27100/api/v1/runtimes"
 ```
 
 ### Response Example
@@ -66,7 +66,7 @@ Retrieves the "Advanced Configuration" schema for a specific runtime. This schem
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/runtimes/schema?runtime=vllm"
+curl -X GET "http://localhost:27100/api/v1/runtimes/schema?runtime=vllm"
 ```
 
 ### Response Example

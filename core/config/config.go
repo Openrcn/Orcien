@@ -9,16 +9,16 @@ import (
 )
 
 type Config struct {
-	AppDomain         string
-	APIPort           int
-	IngressPort       int
-	DatabaseDSN       string
-	AgentBaseURL      string
-	ControlPlaneURL   string
+	AppDomain       string
+	APIPort         int
+	IngressPort     int
+	DatabaseDSN     string
+	AgentBaseURL    string
+	ControlPlaneURL string
 
-	NosanaURL         string `json:"NOSANA_URL"`
-	KMSProvider       string `json:"KMS_PROVIDER"`
-	KMSMasterKey      string `json:"KMS_MASTER_KEY"`
+	NosanaURL    string `json:"NOSANA_URL"`
+	KMSProvider  string `json:"KMS_PROVIDER"`
+	KMSMasterKey string `json:"KMS_MASTER_KEY"`
 
 	MaxConnsPerHost        int
 	MaxActiveRequests      int
@@ -48,14 +48,14 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		AppDomain:        getEnv("APP_DOMAIN", "orcn.dev"),
-		APIPort:          getEnvAsInt("API_PORT", 8080),
-		IngressPort:      getEnvAsInt("INGRESS_PORT", 80),
-		DatabaseDSN:      getEnv("DATABASE_DSN", "orcn.db"),
-		AgentBaseURL:     getEnv("AGENT_BASE_URL", "http://127.0.0.1:4000"),
-		ControlPlaneURL:  getEnv("CONTROL_PLANE_URL", "http://127.0.0.1:8080"),
+		AppDomain:       getEnv("APP_DOMAIN", "orcn.dev"),
+		APIPort:         getEnvAsInt("API_PORT", 27100),
+		IngressPort:     getEnvAsInt("INGRESS_PORT", 27101),
+		DatabaseDSN:     getEnv("DATABASE_DSN", "orcn.db"),
+		AgentBaseURL:    getEnv("AGENT_BASE_URL", "http://127.0.0.1:"+getEnv("NODE_AGENT_PROXY_PORT", "27103")),
+		ControlPlaneURL: getEnv("CONTROL_PLANE_URL", "http://127.0.0.1:27100"),
 
-		KMSProvider: getEnv("KMS_PROVIDER", "local"),
+		KMSProvider:  getEnv("KMS_PROVIDER", "local"),
 		KMSMasterKey: getEnv("KMS_MASTER_KEY", ""),
 
 		MaxConnsPerHost:        getEnvAsInt("GATEWAY_MAX_CONNS_PER_HOST", 20),

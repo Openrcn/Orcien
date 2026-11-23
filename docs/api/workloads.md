@@ -18,7 +18,7 @@ Validates a raw container spec and deploys it to the requested provider infrastr
 
 ### cURL Example
 ```bash
-curl -X POST "http://localhost:8080/api/v1/workloads" \
+curl -X POST "http://localhost:27100/api/v1/workloads" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "custom-jupyter",

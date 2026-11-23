@@ -21,7 +21,7 @@ Creates and launches a new AI model deployment across the specified infrastructu
 
 ### cURL Example
 ```bash
-curl -X POST "http://localhost:8080/api/v1/deployments" \
+curl -X POST "http://localhost:27100/api/v1/deployments" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "production-llama",
@@ -60,7 +60,7 @@ Retrieves all deployments, including their child Nodes and Endpoints.
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/deployments"
+curl -X GET "http://localhost:27100/api/v1/deployments"
 ```
 
 ### Response Example
@@ -105,7 +105,7 @@ Retrieves a specific deployment by ID or Name.
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/deployments/dep-production-llama-1723129200000"
+curl -X GET "http://localhost:27100/api/v1/deployments/dep-production-llama-1723129200000"
 ```
 
 ### Response Example
@@ -150,7 +150,7 @@ Triggers a lifecycle action (start, stop, update timeout) on all nodes in a depl
 
 ### cURL Example
 ```bash
-curl -X POST "http://localhost:8080/api/v1/deployments/dep-production-llama-123/action" \
+curl -X POST "http://localhost:27100/api/v1/deployments/dep-production-llama-123/action" \
   -H "Content-Type: application/json" \
   -d '{
     "action": "stop"

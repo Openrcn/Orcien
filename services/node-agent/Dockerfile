@@ -17,6 +17,6 @@ RUN apk add --no-cache ca-certificates docker-cli
 
 COPY --from=build /out/node-agent /usr/local/bin/node-agent
 
-EXPOSE 8080 9090
+EXPOSE 27103 27102
 
 ENTRYPOINT ["/usr/local/bin/node-agent"]

@@ -127,10 +127,11 @@ flowchart LR
 git clone https://github.com/openrcn/orcien.git
 cd orcien
 make all
+make dev        # gateway + controller + ingress, colored logs
 ```
 
-Then run the services and connect the console. Full instructions, environment
-variables, and local-provider notes live in
+Add `make dev-console` to include the Next.js console. Full instructions,
+environment variables, the local port block, and local-provider notes live in
 **[Self-hosting guide →](docs/SELF_HOSTING.md)**.
 
 ## Providers & runtimes

@@ -45,7 +45,8 @@ yarn-error.log*
 
 .dev/
 
-scripts
+scripts/*
+!scripts/dev.sh
 orcn.db
 TODO.txt
 TODO.ingress.txt

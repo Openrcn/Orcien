@@ -12,7 +12,7 @@ Retrieves a list of available instance markets for a specific infrastructure pro
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/markets?provider=nosana"
+curl -X GET "http://localhost:27100/api/v1/markets?provider=nosana"
 ```
 
 ### Response Example

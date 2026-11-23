@@ -1,4 +1,4 @@
-@URL = http://localhost:8080
+@URL = http://localhost:27100
 @AUTH_TOKEN = your-token
 @deploymentId = workload-compfy-1786100990393
 

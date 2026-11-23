@@ -11,15 +11,15 @@ publishes lifecycle/resource events. The proxy only forwards approved traffic.
 docker run -d \
   --name orcn-node-agent \
   --restart unless-stopped \
-  -p 9090:9090 \
-  -p 8081:8080 \
+  -p 27102:27102 \
+  -p 27103:27103 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e NODE_AGENT_ADMIN_TOKEN="your-admin-token" \
   -e NODE_AGENT_REGISTRATION_API_KEY="your-registration-key" \
   -e AGENT_MODE="shared" \
   -e MAX_WORKLOAD_COUNT="10" \
-  -e NODE_AGENT_ADMIN_ADDRESS="0.0.0.0:9090" \
-  -e NODE_AGENT_PROXY_ADDRESS="0.0.0.0:8080" \
+  -e NODE_AGENT_ADMIN_ADDRESS="0.0.0.0:27102" \
+  -e NODE_AGENT_PROXY_ADDRESS="0.0.0.0:27103" \
   orcn/node-agent:latest
 ```
 
@@ -29,8 +29,8 @@ On WSL2, `--network host` does not expose ports to the Windows host.
 ### Ports
 | Port | Purpose | Default |
 |------|---------|---------|
-| 9090 | Admin API (register, health, capabilities, logs) | `0.0.0.0:9090` |
-| 8081 | Proxy (public workload traffic) | `0.0.0.0:8080` (container) → `8081` (host) |
+| 27102 | Admin API (register, health, capabilities, logs) | `0.0.0.0:27102` |
+| 27103 | Proxy (public workload traffic) | `0.0.0.0:27103` (container) → `27103` (host) |
 
 ### Required Environment Variables
 | Variable | Description |
@@ -39,21 +39,21 @@ On WSL2, `--network host` does not expose ports to the Windows host.
 
 ### Machine Registration (from gateway)
 ```
-Endpoint:       http://<host-ip>:9090
-Proxy Endpoint: http://<host-ip>:8081
+Endpoint:       http://<host-ip>:27102
+Proxy Endpoint: http://<host-ip>:27103
 Token:          <NODE_AGENT_ADMIN_TOKEN>
 ```
 
 ### Verify
 ```bash
 # Admin health (requires AdminToken)
-curl -H "Authorization: Bearer <admin-token>" http://127.0.0.1:9090/healthz
+curl -H "Authorization: Bearer <admin-token>" http://127.0.0.1:27102/healthz
 
 # Capabilities (requires AdminToken)
-curl -H "Authorization: Bearer <admin-token>" http://127.0.0.1:9090/capabilities
+curl -H "Authorization: Bearer <admin-token>" http://127.0.0.1:27102/capabilities
 
 # Proxy health (no auth)
-curl http://127.0.0.1:8081/health
+curl http://127.0.0.1:27103/health
 ```
 
 ## Resource preparation
@@ -120,5 +120,5 @@ go test -tags integration ./services/node-agent \
 
 **Ports not accessible from host (WSL2):**
 - Do NOT use `--network host` - it doesn't forward ports to Windows host
-- Use `-p 9090:9090 -p 8081:8080` bridge mode instead
-- Verify inside container: `docker exec orcn-node-agent netstat -tlnp | grep -E "9090|8080"`
+- Use `-p 27102:27102 -p 27103:27103` bridge mode instead
+- Verify inside container: `docker exec orcn-node-agent netstat -tlnp | grep -E "27102|27103"`

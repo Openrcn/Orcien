@@ -1,6 +1,6 @@
 ### Provider Connections API
 
-@URL = http://localhost:8080
+@URL = http://localhost:27100
 @AUTH_TOKEN = your-token
 @connectionId = replace-with-connection-id
 @provider = nosana

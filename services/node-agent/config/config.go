@@ -38,8 +38,8 @@ func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		AdminAddress:                env("NODE_AGENT_ADMIN_ADDRESS", "127.0.0.1:9090"),
-		ProxyAddress:                env("NODE_AGENT_PROXY_ADDRESS", "0.0.0.0:8080"),
+		AdminAddress:                env("NODE_AGENT_ADMIN_ADDRESS", "127.0.0.1:"+env("NODE_AGENT_ADMIN_PORT", "27102")),
+		ProxyAddress:                env("NODE_AGENT_PROXY_ADDRESS", "0.0.0.0:"+env("NODE_AGENT_PROXY_PORT", "27103")),
 		ProxyTargetHost:             env("NODE_AGENT_PROXY_TARGET_HOST", ""),
 		AdminToken:                  os.Getenv("NODE_AGENT_ADMIN_TOKEN"),
 		RegistrationAPIKey:          os.Getenv("NODE_AGENT_REGISTRATION_API_KEY"),

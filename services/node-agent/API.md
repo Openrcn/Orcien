@@ -4,8 +4,8 @@ The node agent has two servers:
 
 | Server | Default | Purpose |
 |---|---:|---|
-| Admin | `127.0.0.1:9090` | Registration, lifecycle, logs, events |
-| Proxy | `0.0.0.0:8080` | Public workload traffic |
+| Admin | `127.0.0.1:27102` | Registration, lifecycle, logs, events |
+| Proxy | `0.0.0.0:27103` | Public workload traffic |
 
 The admin server controls Docker. The proxy only forwards requests to public
 ports declared in the registered job.
@@ -25,11 +25,11 @@ Run the agent:
 docker rm -f orcn-node-agent 2>/dev/null || true
 
 docker run -d --name orcn-node-agent \
-  -p 127.0.0.1:9090:9090 \
-  -p 127.0.0.1:8080:8080 \
+  -p 127.0.0.1:27102:27102 \
+  -p 127.0.0.1:27103:27103 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -e NODE_AGENT_ADMIN_ADDRESS=0.0.0.0:9090 \
-  -e NODE_AGENT_PROXY_ADDRESS=0.0.0.0:8080 \
+  -e NODE_AGENT_ADMIN_ADDRESS=0.0.0.0:27102 \
+  -e NODE_AGENT_PROXY_ADDRESS=0.0.0.0:27103 \
   -e NODE_AGENT_REGISTRATION_API_KEY=dev-registration-key \
   -e NODE_AGENT_RESOURCE_LOADER_IMAGE=vinitngr/orcn-resource-loader:dev \
   -e AGENT_MODE=shared \
@@ -62,7 +62,7 @@ The Node Agent supports two operating modes controlled via `AGENT_MODE` environm
 containers are prepared before any workload container starts.
 
 ```bash
-curl --max-time 1200 -i -X POST http://127.0.0.1:9090/register \
+curl --max-time 1200 -i -X POST http://127.0.0.1:27102/register \
   -H 'X-Registration-Key: dev-registration-key' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -98,7 +98,7 @@ Success response:
 - `GET /registrations` — Returns all active registered workloads, mode, and total count.
 
 ```bash
-curl -i http://127.0.0.1:9090/registrations
+curl -i http://127.0.0.1:27102/registrations
 ```
 
 Response:
@@ -117,7 +117,7 @@ Response:
 - `DELETE /register/{jobName}` — Unregisters a specific workload, stopping and removing all associated containers and deleting routes.
 
 ```bash
-curl -i -X DELETE http://127.0.0.1:9090/register/mobilebert-resource-test \
+curl -i -X DELETE http://127.0.0.1:27102/register/mobilebert-resource-test \
   -H 'X-Registration-Key: dev-registration-key'
 ```
 
@@ -129,8 +129,8 @@ Response:
 ## Health
 
 ```bash
-curl -i http://127.0.0.1:9090/healthz
-curl -i http://127.0.0.1:8080/healthz
+curl -i http://127.0.0.1:27102/healthz
+curl -i http://127.0.0.1:27103/healthz
 ```
 
 Responses:
@@ -146,14 +146,14 @@ All lifecycle operations require registration and only accept IDs from the
 registered job.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:9090/containers?force=false' \
+curl -i -X POST 'http://127.0.0.1:27102/containers?force=false' \
   -H 'Content-Type: application/json' \
   -d '{"id":"mobilebert-resource-test"}'
 
-curl -i -X POST http://127.0.0.1:9090/containers/mobilebert-resource-test/start
-curl -i -X POST http://127.0.0.1:9090/containers/mobilebert-resource-test/restart
-curl -i -X POST http://127.0.0.1:9090/containers/mobilebert-resource-test/stop
-curl -i -X DELETE http://127.0.0.1:9090/containers/mobilebert-resource-test
+curl -i -X POST http://127.0.0.1:27102/containers/mobilebert-resource-test/start
+curl -i -X POST http://127.0.0.1:27102/containers/mobilebert-resource-test/restart
+curl -i -X POST http://127.0.0.1:27102/containers/mobilebert-resource-test/stop
+curl -i -X DELETE http://127.0.0.1:27102/containers/mobilebert-resource-test
 ```
 
 Ensure response:
@@ -176,13 +176,13 @@ resource volumes are removed after workload removal.
 Snapshot:
 
 ```bash
-curl -i 'http://127.0.0.1:9090/containers/mobilebert-resource-test/logs?tail=100'
+curl -i 'http://127.0.0.1:27102/containers/mobilebert-resource-test/logs?tail=100'
 ```
 
 Live:
 
 ```bash
-curl -sN 'http://127.0.0.1:9090/containers/mobilebert-resource-test/logs?live=true'
+curl -sN 'http://127.0.0.1:27102/containers/mobilebert-resource-test/logs?live=true'
 ```
 
 ## Events
@@ -191,7 +191,7 @@ Events are available before, during, and after registration. Normal snapshots
 contain lifecycle events only; download progress is not stored.
 
 ```bash
-curl -s http://127.0.0.1:9090/events
+curl -s http://127.0.0.1:27102/events
 ```
 
 Example:
@@ -212,7 +212,7 @@ Live events use Server-Sent Events. Start this before registration:
 ```bash
 curl -sN \
   -H 'X-Registration-Key: dev-registration-key' \
-  'http://127.0.0.1:9090/events?live=true'
+  'http://127.0.0.1:27102/events?live=true'
 ```
 
 Progress example:
@@ -242,7 +242,7 @@ Only public ports from the registered job are routed:
 curl -i \
   -H 'X-Orcn-Container: nginx-agent-test' \
   -H 'X-Orcn-Port: 80' \
-  http://127.0.0.1:8080/
+  http://127.0.0.1:27103/
 ```
 
 The proxy removes both `X-Orcn-*` headers before forwarding. Private ports and

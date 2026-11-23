@@ -8,8 +8,8 @@ services:
   #     - ../:/app
   #     - /var/run/docker.sock:/var/run/docker.sock
   #   ports:
-  #     - "8080:8080" # API / Ingress Gateway Port
-  #     - "80:80"     # Primary proxy port
+  #     - "27100:27100" # API / Ingress Gateway Port
+  #     - "27101:27101" # Primary proxy port
   #   environment:
   #     - DB_PATH=/app/orcn.db
   #   networks:
@@ -24,9 +24,9 @@ services:
       - ../:/app
       - /app/apps/console/node_modules
     ports:
-      - "3000:3000"
+      - "27104:27104"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:27100
     networks:
       - orcn-net
     # depends_on:

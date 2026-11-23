@@ -9,7 +9,7 @@ Retrieves all Deployments and Workloads that are currently in a `READY` or `RUNN
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/internal/routes"
+curl -X GET "http://localhost:27100/api/v1/internal/routes"
 ```
 
 ### Response Example

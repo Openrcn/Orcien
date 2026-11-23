@@ -15,7 +15,7 @@ Searches for available models on a specific runtime platform.
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/models/search?runtime=vllm&q=llama"
+curl -X GET "http://localhost:27100/api/v1/models/search?runtime=vllm&q=llama"
 ```
 
 ### Response Example
@@ -54,7 +54,7 @@ Retrieves detailed information, configuration, and recommended parsers for a spe
 
 ### cURL Example
 ```bash
-curl -X GET "http://localhost:8080/api/v1/models/details?runtime=vllm&model=meta-llama/Meta-Llama-3-8B-Instruct"
+curl -X GET "http://localhost:27100/api/v1/models/details?runtime=vllm&model=meta-llama/Meta-Llama-3-8B-Instruct"
 ```
 
 ### Response Example

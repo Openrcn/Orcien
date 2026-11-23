@@ -8,7 +8,7 @@ the console.
 - Go 1.25+
 - Docker (for the local provider)
 - Node.js 20+ (only for the console)
-- Linux/macOS; the ingress binds a privileged port by default
+- Linux/macOS; all default ports are unprivileged, so no `sudo` is needed
 
 ## 1. Build
 
@@ -23,14 +23,40 @@ Produces `bin/gateway`, `bin/controller`, `bin/ingress`, `bin/node-agent`, and
 
 ## 2. Run the services
 
-Four terminals (or a process manager):
+Recommended: one command, one terminal, colored per-service logs:
 
 ```bash
-./bin/gateway               # API on :8080
-./bin/controller            # reconcile loop
-sudo ./bin/ingress          # public ingress on :80 (privileged port)
-make run-node-agent         # node agent: admin :9090, workload proxy :8081
+make dev                 # gateway + controller + ingress
+make dev-console         # same, plus the Next.js console
 ```
+
+`scripts/dev.sh` checks the ports, builds once, starts everything, prefixes each
+line with an arrow/tag (`GATEWAY ➜`, `CONTROLLER ➜`, `INGRESS ➜`, and
+`AGENT ➜` when enabled), and stops the whole stack on Ctrl+C. Useful flags:
+`--no-build`, `--console`, and `--agent` to opt into the node agent. For now the
+node agent is not part of the default `make dev` run.
+
+Manual alternative (one terminal per process):
+
+```bash
+./bin/gateway               # API on :27100
+./bin/controller            # reconcile loop (no listener)
+./bin/ingress               # public ingress on :27101
+make run-node-agent         # node agent: admin :27102, workload proxy :27103
+```
+
+The default local port block is:
+
+| Service | Port |
+| --- | ---: |
+| Gateway API | `27100` |
+| Public ingress | `27101` |
+| Node agent admin | `27102` |
+| Node agent proxy | `27103` |
+| Console dev server | `27104` |
+
+These live in `.env`; override them there (or on the command line) instead of
+editing code.
 
 The node agent needs access to the Docker socket (or run it with
 `/var/run/docker.sock` mounted inside a container).
@@ -40,8 +66,11 @@ The node agent needs access to the Docker socket (or run it with
 ```bash
 cd apps/console
 npm install
-npm run dev                 # http://localhost:3000
+npm run dev -- -p 27104     # http://localhost:27104
 ```
+
+Or from the repo root, `make dev-console` starts it with the same port and
+colored logs alongside the backend.
 
 Open the console, connect the bundled **Local** provider, pick or build a model card,
 and deploy.
@@ -51,8 +80,8 @@ and deploy.
 A deployment serves on hostnames of the form:
 
 ```
-http://<deployment>-<port>.<org>.localhost        # load-balanced across replicas
-http://<deployment>-<node>-<port>.<org>.localhost # pinned to one replica
+http://<deployment>-<port>.<org>.localhost:27101        # load-balanced across replicas
+http://<deployment>-<node>-<port>.<org>.localhost:27101 # pinned to one replica
 ```
 
 Route keys are DNS-slugified, so `node_test` becomes `node-test`. With a real domain,
@@ -70,10 +99,10 @@ docker run -d --name orcn-node-agent \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD/data:/app/data" \
   -e NODE_AGENT_STATE_PATH=/app/data/node-agent-jobs.json \
-  -e NODE_AGENT_ADMIN_ADDRESS=0.0.0.0:9090 \
-  -e NODE_AGENT_PROXY_ADDRESS=0.0.0.0:8080 \
+  -e NODE_AGENT_ADMIN_ADDRESS=0.0.0.0:27102 \
+  -e NODE_AGENT_PROXY_ADDRESS=0.0.0.0:27103 \
   -e NODE_AGENT_ADMIN_TOKEN=orcn-dev-admin-token-2024 \
-  -p 9090:9090 -p 8081:8080 \
+  -p 27102:27102 -p 27103:27103 \
   orcn/node-agent:latest
 ```
 
@@ -101,14 +130,18 @@ workloads with GPU disabled, or run the agent on a GPU-capable host.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `API_PORT` | `8080` | Gateway API port |
-| `INGRESS_PORT` | `80` | Public ingress port |
+| `API_PORT` | `27100` | Gateway API port |
+| `INGRESS_PORT` | `27101` | Public ingress port |
 | `APP_DOMAIN` | `orcn.dev` | Base domain for public routes |
 | `DATABASE_DSN` | `orcn.db` | Database connection (SQLite by default) |
-| `CONTROL_PLANE_URL` | `http://127.0.0.1:8080` | Gateway URL used by the ingress |
+| `CONTROL_PLANE_URL` | `http://127.0.0.1:27100` | Gateway URL used by the ingress |
 | `INTERNAL_API_TOKEN` | `orcn-dev-internal-token` | Service-to-service token |
-| `NODE_AGENT_ADMIN_ADDRESS` | `127.0.0.1:9090` | Agent admin API bind address |
-| `NODE_AGENT_PROXY_ADDRESS` | `0.0.0.0:8081` | Agent workload proxy bind address |
+| `NODE_AGENT_ADMIN_PORT` | `27102` | Agent admin port; binds `127.0.0.1` by default |
+| `NODE_AGENT_PROXY_PORT` | `27103` | Agent workload proxy port; binds `0.0.0.0` by default |
+| `NODE_AGENT_ADMIN_ADDRESS` | `127.0.0.1:27102` | Optional full admin bind address override |
+| `NODE_AGENT_PROXY_ADDRESS` | `0.0.0.0:27103` | Optional full proxy bind address override |
+| `CONSOLE_PORT` | `27104` | Next.js dev server port |
+| `NEXT_PUBLIC_API_URL` | `http://127.0.0.1:27100` | Gateway origin used by the console |
 | `NODE_AGENT_ADMIN_TOKEN` | — | Token the control plane uses to register jobs |
 | `NODE_AGENT_WORKLOAD_NETWORK` | `bridge` | Docker network for workload containers |
 | `NODE_AGENT_STATE_PATH` | `data/node-agent-jobs.json` | Persisted agent registrations |
