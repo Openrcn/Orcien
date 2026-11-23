@@ -13,6 +13,9 @@ export interface ProviderField {
   type: "text" | "password" | "number" | "boolean" | "select" | "file" | "json_array" | "string_array" | "number_array" | string;
   required: boolean;
   secret: boolean;
+  is_advanced?: boolean;
+  min?: number;
+  max?: number;
   default?: string;
   placeholder?: string;
   options?: string[];

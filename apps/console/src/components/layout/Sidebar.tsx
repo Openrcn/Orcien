@@ -1,338 +1,212 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "cn";
 import { useOrgHref, useOrg } from "@/lib/org";
-import {
-  LayoutGrid,
-  Sparkles,
-  Blocks,
-  ChevronLeft,
-  Sun,
-  Moon,
-  Cloud,
-} from "lucide-react";
+import { Layers, Cpu, Cloud, Box, type LucideIcon } from "lucide-react";
 
-export function Sidebar({ isCollapsed, setIsCollapsed }: any) {
+function BrandMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      aria-label="Orcien logo"
+      className="flex-none"
+    >
+      <defs>
+        <linearGradient id="orcn-mk" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" style={{ stopColor: "var(--logo1)" }} />
+          <stop offset="1" style={{ stopColor: "var(--logo2)" }} />
+        </linearGradient>
+      </defs>
+      <path
+        fill="url(#orcn-mk)"
+        fillRule="evenodd"
+        d="M256 83a171 171 0 0 1 0 342v-53a118 118 0 1 0-118-118H85A171 171 0 0 1 256 83Z"
+      />
+      <path fill="url(#orcn-mk)" d="M138 254h118v118h-53v-65h-65z" />
+      <path
+        fill="url(#orcn-mk)"
+        fillRule="evenodd"
+        d="M85 307h118v118H85zM138 307h65v65h-65z"
+      />
+    </svg>
+  );
+}
+
+function SectionLabel({
+  children,
+  isCollapsed,
+  first,
+}: {
+  children: string;
+  isCollapsed: boolean;
+  first?: boolean;
+}) {
+  if (isCollapsed) {
+    return (
+      <div
+        className={cn(
+          "mx-auto w-6 border-t border-line",
+          first ? "mb-3 mt-[18px]" : "my-3",
+        )}
+      />
+    );
+  }
+  return (
+    <div
+      className={cn(
+        "px-3 pb-2 text-xs font-medium uppercase tracking-wide text-mut",
+        first ? "pt-[18px]" : "pt-6",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function NavItem({
+  href,
+  icon: Icon,
+  label,
+  active,
+  isCollapsed,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  isCollapsed: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={isCollapsed ? label : undefined}
+      className={cn(
+        "group relative mb-1 flex h-10 items-center gap-[13px] rounded-[10px] border text-[14.5px] transition",
+        active
+          ? "border-line2 bg-card font-medium text-fg"
+          : "border-transparent text-mut2 hover:bg-fg/5 hover:text-fg",
+        isCollapsed ? "mx-auto w-10 justify-center" : "px-3",
+      )}
+    >
+      <Icon className="size-[18px] flex-none" strokeWidth={1.7} />
+      {!isCollapsed && <span className="truncate">{label}</span>}
+      {isCollapsed && (
+        <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-full border border-line2 bg-card px-3 py-1 text-xs font-medium text-fg opacity-0 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.5)] transition duration-150 group-hover:translate-x-0 group-hover:opacity-100">
+          {label}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+export function Sidebar({ isCollapsed }: any) {
   const pathname = usePathname();
   const { slug } = useOrg();
   const orgHref = useOrgHref();
   // Org-scoped prefix for activity matching (e.g. "/acme").
   const base = slug ? `/${slug}` : "";
-  const width = isCollapsed ? 72 : 240;
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (nextDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
-
-  const navItemStyle = (isActive: boolean) => ({
-    padding: isCollapsed ? "0.75rem" : "0.6rem 0.8rem",
-    borderRadius: "6px",
-    backgroundColor: isActive ? "var(--surface-hover)" : "transparent",
-    color: isActive ? "var(--text-main)" : "var(--text-muted)",
-    fontWeight: 500,
-    fontSize: "0.875rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: isCollapsed ? "center" : "flex-start",
-    gap: "0.75rem",
-    transition: "background-color 0.15s ease, color 0.15s ease",
-  });
 
   return (
-    <div
-      style={{
-        width: `${width}px`,
-        height: "100vh",
-        backgroundColor: "var(--surface)",
-        borderRight: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        position: "fixed",
-        left: 0,
-        top: 0,
-        transition: "width 0.2s ease",
-        overflowX: "hidden",
-        zIndex: 40,
-      }}
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r border-line bg-bg transition-[width] duration-200",
+        isCollapsed ? "w-[72px] px-3" : "w-[264px] px-4",
+      )}
     >
-      {/* Top Logo & Toggle */}
+      {/* Brand */}
       <div
-        style={{
-          padding: isCollapsed ? "1.5rem 0" : "1.5rem 1.25rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isCollapsed ? "center" : "space-between",
-        }}
+        className={cn(
+          "-mx-4 flex h-14 flex-none items-center gap-2.5 border-b border-line px-5",
+          isCollapsed && "-mx-3 justify-center px-0",
+        )}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            overflow: "hidden",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: 700,
-              letterSpacing: "-0.05em",
-              fontFamily: '"Space Grotesk", sans-serif',
-              color: "var(--text-main)",
-              display: isCollapsed ? "none" : "block",
-            }}
-          >
-            ORCN
-          </span>
-        </div>
-
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0.25rem",
-            borderRadius: "4px",
-          }}
-        >
-          <ChevronLeft
-            size={18}
-            style={{
-              transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s ease",
-            }}
-          />
-        </button>
+        <BrandMark />
+        {!isCollapsed && (
+          <span className="text-[13px] font-bold tracking-[.16em]">ORCIEN</span>
+        )}
       </div>
 
-      {/* Navigation items */}
+      {/* Nav — overflow stays visible when collapsed so tooltips can escape */}
       <nav
-        style={{
-          flex: 1,
-          padding: isCollapsed ? "0 0.5rem" : "0 0.75rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.25rem",
-        }}
+        className={cn(
+          "flex-1 pb-3",
+          isCollapsed ? "overflow-visible" : "overflow-y-auto overflow-x-hidden",
+        )}
       >
-        <div
-          style={{
-            marginTop: "0.5rem",
-            marginBottom: "0.25rem",
-            padding: "0 0.75rem",
-            display: isCollapsed ? "none" : "block",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Deploy
-          </span>
-        </div>
-
-        <Link
+        <SectionLabel isCollapsed={isCollapsed} first>
+          Deploy
+        </SectionLabel>
+        <NavItem
           href={orgHref("/deployments")}
-          style={navItemStyle(
+          icon={Layers}
+          label="Deployments"
+          isCollapsed={isCollapsed}
+          active={
             base
               ? pathname.startsWith(`${base}/deployments`) ||
-                  pathname === `${base}/`
-              : pathname.startsWith("/deployments") || pathname === "/",
-          )}
-        >
-          <LayoutGrid size={18} strokeWidth={2.2} />
-          {!isCollapsed && (
-            <span style={{ whiteSpace: "nowrap" }}>Deployments</span>
-          )}
-        </Link>
-        <Link
+                pathname === `${base}/`
+              : pathname.startsWith("/deployments") || pathname === "/"
+          }
+        />
+        <NavItem
           href={orgHref("/models")}
-          style={navItemStyle(pathname.startsWith(`${base}/models`))}
-        >
-          <Sparkles size={18} strokeWidth={2.2} />
-          {!isCollapsed && (
-            <span style={{ whiteSpace: "nowrap" }}>AI Models</span>
-          )}
-        </Link>
+          icon={Cpu}
+          label="AI models"
+          isCollapsed={isCollapsed}
+          active={pathname.startsWith(`${base}/models`)}
+        />
 
-        <div
-          style={{
-            marginTop: "1.5rem",
-            marginBottom: "0.25rem",
-            padding: "0 0.75rem",
-            display: isCollapsed ? "none" : "block",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Configuration
-          </span>
-        </div>
-
-        <Link
+        <SectionLabel isCollapsed={isCollapsed}>Configuration</SectionLabel>
+        <NavItem
           href={orgHref("/providers")}
-          style={navItemStyle(pathname.startsWith(`${base}/providers`))}
-        >
-          <Cloud size={18} strokeWidth={2.2} />
-          {!isCollapsed && (
-            <span style={{ whiteSpace: "nowrap" }}>Providers</span>
-          )}
-        </Link>
-
-        <Link
+          icon={Cloud}
+          label="Providers"
+          isCollapsed={isCollapsed}
+          active={pathname.startsWith(`${base}/providers`)}
+        />
+        <NavItem
           href={orgHref("/templates")}
-          style={navItemStyle(pathname.startsWith(`${base}/templates`))}
-        >
-          <Blocks size={18} strokeWidth={2.2} />
-          {!isCollapsed && (
-            <span style={{ whiteSpace: "nowrap" }}>Templates</span>
-          )}
-        </Link>
+          icon={Box}
+          label="Templates"
+          isCollapsed={isCollapsed}
+          active={pathname.startsWith(`${base}/templates`)}
+        />
       </nav>
 
-      {/* Bottom Footer Section: Profile & Theme Toggle */}
+      {/* User footer */}
       <div
-        style={{
-          padding: isCollapsed ? "0.75rem 0.5rem" : "0.75rem 0.75rem",
-          borderTop: "1px solid var(--border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isCollapsed ? "center" : "space-between",
-          gap: "0.5rem",
-          backgroundColor: "var(--surface)",
-        }}
+        className={cn(
+          "-mx-4 flex h-[72px] flex-none items-center border-t border-line px-5",
+          isCollapsed && "-mx-3 justify-center px-3",
+        )}
       >
-        {/* Reserved Profile Button */}
         <button
-          title="User Profile"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.6rem",
-            padding: isCollapsed ? "0.5rem" : "0.4rem 0.6rem",
-            borderRadius: "6px",
-            backgroundColor: "transparent",
-            color: "var(--text-main)",
-            border: "none",
-            cursor: "pointer",
-            flex: isCollapsed ? "initial" : 1,
-            overflow: "hidden",
-            transition: "background-color 0.15s ease",
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "var(--surface-hover)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor = "transparent")
-          }
+          type="button"
+          title="User profile"
+          className={cn(
+            "flex cursor-pointer items-center gap-3 transition",
+            isCollapsed
+              ? "mx-auto rounded-full hover:brightness-110"
+              : "w-full rounded-xl p-1.5 hover:bg-fg/5",
+          )}
         >
-          <div
-            style={{
-              width: "26px",
-              height: "26px",
-              borderRadius: "50%",
-              backgroundColor: "var(--primary)",
-              color: "var(--primary-foreground)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
+          <span className="grid size-[34px] flex-none place-items-center rounded-full border border-line2 bg-accent/10 font-mono text-xs">
             V
-          </div>
+          </span>
           {!isCollapsed && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                overflow: "hidden",
-                textAlign: "left",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "0.8125rem",
-                  fontWeight: 600,
-                  color: "var(--text-main)",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                  overflow: "hidden",
-                  width: "100%",
-                }}
-              >
-                Vinit
+            <span className="min-w-0 flex-1 text-left leading-tight">
+              <b className="block text-sm font-medium">Vinit</b>
+              <span className="block truncate text-xs text-mut">
+                {slug ?? "orcien.cloud"}
               </span>
-            </div>
+            </span>
           )}
         </button>
-
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "6px",
-            color: "var(--text-muted)",
-            backgroundColor: "transparent",
-            border: "none",
-            cursor: "pointer",
-            flexShrink: 0,
-            transition: "background-color 0.15s ease, color 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--surface-hover)";
-            e.currentTarget.style.color = "var(--text-main)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = "var(--text-muted)";
-          }}
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
       </div>
-    </div>
+    </aside>
   );
 }

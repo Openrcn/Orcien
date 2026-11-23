@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { OrgProvider } from "@/lib/org";
 
 export const metadata: Metadata = {
-  title: "ORCN | Deployments",
+  title: "Orcien | Deployments",
   description: "Configure and manage multiple job instances",
 };
 

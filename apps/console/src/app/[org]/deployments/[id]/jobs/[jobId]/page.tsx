@@ -44,7 +44,7 @@ export default function JobDetailPage(props: {
           fontWeight: highlight ? 500 : 400,
           fontSize: "0.875rem",
           fontFamily: monospace ? "monospace" : "inherit",
-          color: highlight ? "var(--accent)" : "var(--text-main)",
+          color: highlight ? "rgb(var(--accent-t))" : "var(--text-main)",
         }}
       >
         {value}

@@ -14,7 +14,10 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:27104](http://localhost:27104) with your browser to see the result.
+
+The port comes from `CONSOLE_PORT` in the repo root `.env` when you use
+`make dev-console`; when you run `npm run dev` directly, use `npm run dev -- -p 27104`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

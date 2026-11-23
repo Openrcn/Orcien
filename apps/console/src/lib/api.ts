@@ -1,4 +1,4 @@
-const DEFAULT_GATEWAY_ORIGIN = "http://localhost:8080";
+const DEFAULT_GATEWAY_ORIGIN = "http://localhost:27100";
 
 /**
  * Resolves the HTTP origin of the Go gateway.
@@ -14,7 +14,7 @@ export function apiOrigin(): string {
   if (typeof window === "undefined") return DEFAULT_GATEWAY_ORIGIN;
 
   const { hostname, port, protocol } = window.location;
-  if (port === "8080") return `${protocol}//${hostname}:${port}`;
+  if (port === "27100") return `${protocol}//${hostname}:${port}`;
   if (hostname === "localhost" || hostname === "127.0.0.1") {
     return DEFAULT_GATEWAY_ORIGIN;
   }

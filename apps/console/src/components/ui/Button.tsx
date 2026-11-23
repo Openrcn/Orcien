@@ -1,104 +1,45 @@
 import { ButtonHTMLAttributes, ReactNode } from "react";
+import { cn } from "cn";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   children: ReactNode;
 }
+
+const variantClasses = {
+  // green gradient fill + light border + inset highlight (kit: btn-pri)
+  primary: "btn-pri border hover:brightness-110",
+  // gradient border on card fill (kit: gb)
+  secondary:
+    "gb text-fg shadow-[inset_0_1px_0_var(--hi)] hover:brightness-110",
+  outline: "border border-line2 text-fg hover:bg-fg/5",
+  ghost: "text-mut2 hover:bg-fg/5 hover:text-fg",
+  danger: "border border-bad/45 text-bad hover:bg-bad/10",
+};
+
+const sizeClasses = {
+  sm: "h-8 px-3.5 text-[13px]",
+  md: "h-10 px-5 text-sm",
+  lg: "h-11 px-6 text-sm",
+};
 
 export function Button({
   variant = "primary",
   size = "md",
   children,
-  style,
+  className,
   ...props
 }: ButtonProps) {
-  const baseStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 500,
-    borderRadius: "0.75rem", // Use rounded-xl for UI consistency
-    transition: "all 0.15s ease",
-    cursor: props.disabled ? "not-allowed" : "pointer",
-    ...style,
-  };
-
-  const sizeStyles = {
-    sm: { padding: "0.25rem 0.75rem", fontSize: "0.75rem" },
-    md: { padding: "0.4rem 1rem", fontSize: "0.875rem" },
-    lg: { padding: "0.75rem 1.5rem", fontSize: "0.875rem" },
-  };
-
-  const variantStyles = {
-    primary: {
-      backgroundColor: "var(--primary)",
-      color: "var(--primary-foreground)",
-      border: "1px solid var(--primary)",
-      boxShadow:
-        "0 1px 2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)",
-    },
-    secondary: {
-      backgroundColor: "var(--surface)",
-      color: "var(--text-main)",
-      border: "1px solid var(--border)",
-      boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-    },
-    outline: {
-      backgroundColor: "transparent",
-      color: "var(--text-main)",
-      border: "1px solid var(--border)",
-    },
-    ghost: {
-      backgroundColor: "transparent",
-      color: "var(--text-muted)",
-      border: "1px solid transparent",
-    },
-  };
-
-  const currentSize = sizeStyles[size];
-  const currentVariant = variantStyles[variant];
-  const disabledStyle = props.disabled
-    ? { opacity: 0.5, boxShadow: "none" }
-    : {};
-
   return (
     <button
       {...props}
-      style={{
-        ...baseStyle,
-        ...currentSize,
-        ...currentVariant,
-        ...disabledStyle,
-      }}
-      onMouseEnter={(e) => {
-        if (!props.disabled) {
-          if (variant === "primary")
-            e.currentTarget.style.backgroundColor = "var(--primary-hover)";
-          if (variant === "secondary") {
-            e.currentTarget.style.backgroundColor = "var(--surface-hover)";
-            e.currentTarget.style.borderColor = "var(--border-hover)";
-          }
-          if (variant === "outline")
-            e.currentTarget.style.borderColor = "var(--border-hover)";
-          if (variant === "ghost")
-            e.currentTarget.style.color = "var(--text-main)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!props.disabled) {
-          if (variant === "primary")
-            e.currentTarget.style.backgroundColor = "var(--primary)";
-          if (variant === "secondary") {
-            e.currentTarget.style.backgroundColor = "var(--surface)";
-            e.currentTarget.style.borderColor = "var(--border)";
-          }
-          if (variant === "outline")
-            e.currentTarget.style.borderColor = "var(--border)";
-          if (variant === "ghost")
-            e.currentTarget.style.color = "var(--text-muted)";
-        }
-      }}
+      className={cn(
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45 disabled:active:translate-y-0",
+        variantClasses[variant],
+        sizeClasses[size],
+        className,
+      )}
     >
       {children}
     </button>

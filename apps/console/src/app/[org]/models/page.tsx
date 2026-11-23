@@ -2,8 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowUpRight, Plus, Sparkles } from "lucide-react";
-import { Logo } from "@/components/ui/Logos";
+import {
+  Search,
+  Plus,
+  FileText,
+  Boxes,
+  ListOrdered,
+  Eye,
+  GitBranch,
+  Image as ImageIcon,
+  AudioLines,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
+import { ModelCard } from "@/components/models/ModelCard";
 import {
   Select,
   SelectContent,
@@ -16,7 +28,6 @@ import {
   CURATED_MODELS,
   CURATED_PROVIDERS,
   MODEL_CATEGORIES,
-  type CuratedModel,
 } from "@/data/curated-models";
 
 const CATEGORY_ITEMS = [
@@ -36,77 +47,16 @@ const SIZE_ITEMS = [
   { label: "> 13B", value: "large" },
 ];
 
-function formatParams(p: number) {
-  if (p < 1) return `${Math.round(p * 1000)}M`;
-  return `${p}B`;
-}
-
-function ModelCard({
-  m,
-  onDeploy,
-}: {
-  m: CuratedModel;
-  onDeploy: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onDeploy}
-      className="group relative flex min-h-[176px] w-full flex-col justify-between rounded-xl border border-[var(--dm-card-border)] bg-[var(--card-bg)] p-5 text-left transition-all duration-150 hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]"
-    >
-      <ArrowUpRight className="absolute right-4 top-4 size-4 text-[var(--text-light)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
-
-      <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-logo)] p-2">
-          <Logo name={m.logo} size={24} />
-        </div>
-        <div className="min-w-0 flex-1 pr-6">
-          <div
-            className="truncate text-sm font-semibold text-[var(--text-main)]"
-            title={m.displayName}
-          >
-            {m.displayName}
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            {m.provider}
-          </div>
-          <p
-            className="mt-2 line-clamp-3 text-xs leading-relaxed text-[var(--text-muted)]"
-            title={m.description}
-          >
-            {m.description}
-          </p>
-          <div className="mt-3 flex min-w-0 flex-wrap gap-1.5">
-            <span className="rounded bg-[var(--dm-chip)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
-              {m.pipeline}
-            </span>
-            {m.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                title={tag}
-                className="max-w-full truncate rounded bg-[var(--dm-chip)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] capitalize"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 flex items-center gap-4 border-t border-[var(--dm-divider)] pt-3.5 text-[11px] text-[var(--text-muted)]">
-        <span>{formatParams(m.parameters)}</span>
-        <span className="text-[var(--border)]">|</span>
-        <span>{m.minVramGb ? `~${m.minVramGb} GB VRAM` : m.runtime}</span>
-        {m.contextLength && (
-          <>
-            <span className="text-[var(--border)]">|</span>
-            <span>{m.contextLength} ctx</span>
-          </>
-        )}
-      </div>
-    </button>
-  );
-}
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  llm: FileText,
+  embedding: Boxes,
+  reranker: ListOrdered,
+  vision: Eye,
+  decision: GitBranch,
+  image: ImageIcon,
+  audio: AudioLines,
+  video: Video,
+};
 
 export default function AIModelsPage() {
   const router = useRouter();
@@ -147,6 +97,13 @@ export default function AIModelsPage() {
     [filtered],
   );
 
+  const clearFilters = () => {
+    setQuery("");
+    setCategory("all");
+    setProvider("all");
+    setSize("all");
+  };
+
   const handleDeploy = (
     modelId: string,
     runtime: string,
@@ -164,52 +121,57 @@ export default function AIModelsPage() {
   };
 
   return (
-    <div className="space-y-7">
-      <header className="flex flex-col gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto w-full max-w-[1360px]">
+      {/* Page header */}
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]">
-            <Sparkles className="size-3.5" /> Tested & ready to deploy
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[28px] font-semibold leading-tight tracking-[-.03em]">
+              AI models
+            </h1>
+            <span className="rounded-full border border-line bg-card px-[9px] py-px text-[11px] font-medium text-mut2">
+              {CURATED_MODELS.length} models
+            </span>
           </div>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--text-main)]">
-            AI Models
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Pre-configured models we have tested hosting. Pick one and choose
-            compute — no setup needed.
+          <p className="mt-1.5 text-[13.5px] text-mut2">
+            Pick a model from the catalog, choose a size, and deploy it in one
+            click.
           </p>
         </div>
         <button
           type="button"
           onClick={() => router.push(orgHref("/models/deploy"))}
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-xs font-medium text-[var(--text-main)] transition hover:border-[var(--border-hover)]"
+          className="gb inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[13px] text-fg shadow-[inset_0_1px_0_var(--hi)] transition hover:brightness-110 active:translate-y-px"
         >
-          <Plus className="size-3.5" />
+          <Plus className="size-4" strokeWidth={1.7} />
           Deploy custom model
         </button>
-      </header>
+      </div>
 
       {/* Search + filters */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--text-light)]" />
+      <div className="flex flex-wrap items-center gap-2.5 py-3">
+        <label className="gb-f flex h-9 w-full max-w-xs items-center gap-2 rounded-xl pl-3 pr-2.5 text-mut sm:w-80">
+          <Search className="size-4 flex-none" strokeWidth={1.7} />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search curated models (e.g. llama, embeddings, vision)"
-            className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--dm-input)] pl-10 pr-3.5 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:border-[var(--border-hover)] focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+            placeholder="Search models, publishers or tasks"
+            className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-mut"
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+        </label>
+
+        <div className="flex flex-wrap gap-2">
           <Select
             value={category}
             items={CATEGORY_ITEMS}
             onValueChange={(val: string | null) => val && setCategory(val)}
           >
-            <SelectTrigger className="h-9 min-w-[130px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
-              <SelectValue placeholder="Category" />
+            <SelectTrigger>
+              <span className="text-[12.5px] text-mut">Type</span>
+              <SelectValue placeholder="All types" />
             </SelectTrigger>
-            <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
+            <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {MODEL_CATEGORIES.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
@@ -223,10 +185,11 @@ export default function AIModelsPage() {
             items={PROVIDER_ITEMS}
             onValueChange={(val: string | null) => val && setProvider(val)}
           >
-            <SelectTrigger className="h-9 min-w-[140px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
-              <SelectValue placeholder="Provider" />
+            <SelectTrigger>
+              <span className="text-[12.5px] text-mut">Provider</span>
+              <SelectValue placeholder="All providers" />
             </SelectTrigger>
-            <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
+            <SelectContent>
               <SelectItem value="all">All providers</SelectItem>
               {CURATED_PROVIDERS.map((p) => (
                 <SelectItem key={p} value={p}>
@@ -240,10 +203,11 @@ export default function AIModelsPage() {
             items={SIZE_ITEMS}
             onValueChange={(val: string | null) => val && setSize(val)}
           >
-            <SelectTrigger className="h-9 min-w-[110px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
-              <SelectValue placeholder="Size" />
+            <SelectTrigger>
+              <span className="text-[12.5px] text-mut">Size</span>
+              <SelectValue placeholder="All sizes" />
             </SelectTrigger>
-            <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
+            <SelectContent>
               <SelectItem value="all">All sizes</SelectItem>
               <SelectItem value="small">&lt; 4B</SelectItem>
               <SelectItem value="mid">4B - 13B</SelectItem>
@@ -255,46 +219,53 @@ export default function AIModelsPage() {
 
       {/* Sections */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--dm-hover-soft)] px-6 py-14 text-center">
-          <Search className="size-5 text-zinc-600" />
-          <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">
-            No models match your filters
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--text-light)]">
-            Try a different search or clear the type / provider filter.
-          </p>
+        <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed border-line2 px-5 py-10 text-center">
+          <b>No models match your filters</b>
+          <span className="text-mut">
+            Try a different search or clear the filters.
+          </span>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="gb mt-1 inline-flex h-8 items-center rounded-full px-3.5 text-[13px] transition hover:brightness-110"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
-        <div className="space-y-10">
-          {sections.map((section) => (
-            <section key={section.id}>
-              <div className="mb-4 flex items-baseline justify-between">
-                <div>
-                  <h2 className="text-base font-semibold tracking-tight text-[var(--text-main)]">
+        <div>
+          {sections.map((section) => {
+            const Icon = CATEGORY_ICONS[section.id] ?? FileText;
+            return (
+              <section key={section.id} className="mb-2 mt-[22px]">
+                <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                  <span className="grid size-[30px] flex-none place-items-center rounded-[9px] border border-line bg-band text-mut2">
+                    <Icon className="size-[15px]" strokeWidth={1.7} />
+                  </span>
+                  <h2 className="text-[17px] font-semibold tracking-[-.015em]">
                     {section.label}
                   </h2>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                  <span className="rounded-full border border-line bg-card px-[9px] py-px text-[11px] font-medium text-mut2">
+                    {section.models.length}
+                  </span>
+                  <span className="text-[13px] text-mut">
                     {section.description}
-                  </p>
+                  </span>
                 </div>
-                <span className="shrink-0 text-[11px] text-[var(--text-light)]">
-                  {section.models.length}{" "}
-                  {section.models.length === 1 ? "model" : "models"}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {section.models.map((m) => (
-                  <ModelCard
-                    key={m.modelId}
-                    m={m}
-                    onDeploy={() =>
-                      handleDeploy(m.modelId, m.runtime, m.modality, m.image)
-                    }
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {section.models.map((m) => (
+                    <ModelCard
+                      key={m.modelId}
+                      model={m}
+                      onDeploy={(modelId) =>
+                        handleDeploy(modelId, m.runtime, m.modality, m.image)
+                      }
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

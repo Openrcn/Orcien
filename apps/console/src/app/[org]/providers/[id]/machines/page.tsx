@@ -203,7 +203,7 @@ export default function MachinesPage() {
                 <input
                   value={formEndpoint}
                   onChange={(e) => setFormEndpoint(e.target.value)}
-                  placeholder="http://192.168.1.10:9090"
+                  placeholder="http://192.168.1.10:27102"
                   className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--dm-inset)] px-3 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -214,7 +214,7 @@ export default function MachinesPage() {
                 <input
                   value={formProxyEndpoint}
                   onChange={(e) => setFormProxyEndpoint(e.target.value)}
-                  placeholder="http://192.168.1.10:8080"
+                  placeholder="http://192.168.1.10:27103"
                   className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--dm-inset)] px-3 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:outline-none focus:border-blue-500"
                 />
                 <p className="text-[10px] text-[var(--text-light)]">

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, Search } from "lucide-react";
+import { cn } from "cn";
 import { ModelCard, ModelItem } from "./ModelCard";
 import { ModelDetailCard } from "./ModelDetailCard";
 import { ModelDetails } from "./model-types";
+import { K } from "@/components/providers/kit";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -29,7 +32,6 @@ export interface RuntimeCapability {
   id: string;
   name: string;
   tasks: RuntimeTask[];
-  /** Generic capability facets this runtime can filter on (from the backend). */
   capabilities?: RuntimeCapabilityFacet[];
 }
 
@@ -56,6 +58,7 @@ interface ModelSearchPanelProps {
   onHfTokenChange: (token: string) => void;
 }
 
+/* Step 1 — Find a model: filters card + stacked model rows with inline expansion */
 export function ModelSearchPanel({
   searchQuery,
   onSearchChange,
@@ -78,19 +81,17 @@ export function ModelSearchPanel({
   hfToken,
   onHfTokenChange,
 }: ModelSearchPanelProps) {
-  const [sizeFilter, setSizeFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("popular");
+  const [sortBy, setSortBy] = useState("trending");
 
-  // Runtimes that support the selected modality, discovered from the backend.
-  const supportedRuntimes = useMemo(() => {
-    return runtimes.filter((r) => r.tasks.some((t) => t.id === modality));
-  }, [runtimes, modality]);
+  const supportedRuntimes = useMemo(
+    () => runtimes.filter((r) => r.tasks.some((t) => t.id === modality)),
+    [runtimes, modality],
+  );
 
-  // The selected runtime is the source of truth for which tasks can be
-  // chosen: e.g. picking vLLM hides Decision, which only Ollama serves.
-  const selectedRuntime = useMemo(() => {
-    return runtimes.find((r) => r.id === runtime);
-  }, [runtimes, runtime]);
+  const selectedRuntime = useMemo(
+    () => runtimes.find((r) => r.id === runtime),
+    [runtimes, runtime],
+  );
 
   const visibleModalities = selectedRuntime?.tasks ?? modalities;
 
@@ -110,74 +111,57 @@ export function ModelSearchPanel({
     }
   };
 
-  // Filter models by size using real parameter counts from the model card.
-  const filteredModels = useMemo(() => {
-    let list = [...searchResults];
-    if (sizeFilter !== "all") {
-      list = list.filter((m) => {
-        const params = m.parameters;
-        if (params === undefined) return true;
-        if (sizeFilter === "small") return params < 7;
-        if (sizeFilter === "mid") return params >= 7 && params <= 13;
-        if (sizeFilter === "large") return params > 13 && params <= 70;
-        if (sizeFilter === "xl") return params > 70;
-        return true;
-      });
-    }
-
+  const sortedModels = useMemo(() => {
+    const list = [...searchResults];
     if (sortBy === "downloads") {
       list.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
     } else if (sortBy === "likes") {
       list.sort((a, b) => (b.likes || 0) - (a.likes || 0));
     }
     return list;
-  }, [searchResults, sizeFilter, sortBy]);
+  }, [searchResults, sortBy]);
+
+  const selectedTaskLabel = modalities.find((t) => t.id === modality)?.name;
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--dm-panel)] p-6 shadow-sm">
-        {/* Title & Subtitle */}
-        <div className="mb-5">
-          <h2 className="text-xl font-semibold tracking-tight text-[var(--text-main)]">
-            Select a Model
-          </h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Search and choose a model from the hub.
-          </p>
+    <div className="space-y-5">
+      <section className={K.dbx}>
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-3">
+          <h3 className="text-[15px] font-semibold tracking-[-.01em]">
+            Find a model
+          </h3>
+          <span className={cn(K.pill, "ml-auto")}>Hugging Face Hub</span>
         </div>
 
-        <div className="space-y-5">
-          {/* Search bar & Shadcn filter selects */}
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--text-light)]" />
-              <input
-                type="text"
+        <div className={K.inner}>
+          {/* Filters */}
+          <div className="grid gap-3 border-b border-line p-3.5">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-mut" />
+              <Input
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSearch()}
-                placeholder="Search models (e.g. meta-llama/Llama-3.1-8B-Instruct)"
-                className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--dm-input)] pl-10 pr-3.5 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:border-[var(--border-hover)] focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                placeholder="Search models, e.g. llama, qwen, embedding"
+                className="pl-10 pr-9"
               />
               {isSearching && (
-                <Loader2 className="absolute right-3.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-[var(--text-light)]" />
+                <Loader2 className="absolute right-3.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-mut" />
               )}
             </div>
 
-            {/* Filters using Shadcn Select */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Modality / Task (discovered from the backend runtime registry) */}
               <Select
                 value={modality}
                 onValueChange={(val: string | null) =>
                   val && handleModalitySelect(val)
                 }
               >
-                <SelectTrigger className="h-9 min-w-[140px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
+                <SelectTrigger className="min-w-[170px] text-[13px] data-[size=default]:h-11">
                   <SelectValue placeholder="Modality" />
                 </SelectTrigger>
-                <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
+                <SelectContent>
                   {visibleModalities.map((task) => (
                     <SelectItem key={task.id} value={task.id}>
                       {task.name}
@@ -186,17 +170,16 @@ export function ModelSearchPanel({
                 </SelectContent>
               </Select>
 
-              {/* Runtime (only those registered for the selected modality) */}
               <Select
                 value={runtime}
                 onValueChange={(val: string | null) =>
                   val && handleRuntimeSelect(val)
                 }
               >
-                <SelectTrigger className="h-9 min-w-[100px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
+                <SelectTrigger className="min-w-[150px] text-[13px] data-[size=default]:h-11">
                   <SelectValue placeholder="Runtime" />
                 </SelectTrigger>
-                <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
+                <SelectContent>
                   {supportedRuntimes.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name}
@@ -205,117 +188,106 @@ export function ModelSearchPanel({
                 </SelectContent>
               </Select>
 
-              {/* Size Filter */}
-              <Select
-                value={sizeFilter}
-                onValueChange={(val: string | null) =>
-                  val && setSizeFilter(val)
-                }
-              >
-                <SelectTrigger className="h-9 min-w-[110px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
-                  <SelectValue placeholder="Size" />
-                </SelectTrigger>
-                <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
-                  <SelectItem value="all">All Sizes</SelectItem>
-                  <SelectItem value="small">&lt; 7B</SelectItem>
-                  <SelectItem value="mid">7B - 13B</SelectItem>
-                  <SelectItem value="large">14B - 70B</SelectItem>
-                  <SelectItem value="xl">&gt; 70B</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Sort */}
-              <Select
-                value={sortBy}
-                onValueChange={(val: string | null) => val && setSortBy(val)}
-              >
-                <SelectTrigger className="h-9 min-w-[150px] border-[var(--border)] bg-[var(--dm-input)] text-xs text-[var(--dm-text-2)]">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent className="border-[var(--border)] bg-[var(--dm-logo-solid)] text-[var(--dm-text-2)]">
-                  <SelectItem value="popular">Sort: Most popular</SelectItem>
-                  <SelectItem value="downloads">Sort: Downloads</SelectItem>
-                  <SelectItem value="likes">Sort: Likes</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="ml-auto">
+                <Select
+                  value={sortBy}
+                  onValueChange={(val: string | null) => val && setSortBy(val)}
+                >
+                  <SelectTrigger className="min-w-[150px] text-[13px] data-[size=default]:h-11">
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="trending">Trending</SelectItem>
+                    <SelectItem value="downloads">Most downloaded</SelectItem>
+                    <SelectItem value="likes">Most liked</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {/* Runtime capability facets (backend driven) */}
+            {selectedRuntime?.capabilities &&
+              selectedRuntime.capabilities.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-mut">Capabilities:</span>
+                  {selectedRuntime.capabilities.map((cap) => {
+                    const active = capabilities.includes(cap.id);
+                    return (
+                      <button
+                        key={cap.id}
+                        type="button"
+                        title={cap.description}
+                        onClick={() => onToggleCapability(cap.id)}
+                        className={cn(
+                          K.pill,
+                          "transition",
+                          active
+                            ? "border-accent/40 bg-accent/10 text-accent-t"
+                            : "hover:text-fg",
+                        )}
+                      >
+                        {cap.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
           </div>
 
-          {/* Capability facets, offered by the selected runtime (e.g. Ollama: tools / thinking / vision) */}
-          {selectedRuntime?.capabilities &&
-            selectedRuntime.capabilities.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-[var(--text-light)]">
-                  Capabilities:
-                </span>
-                {selectedRuntime.capabilities.map((cap) => {
-                  const active = capabilities.includes(cap.id);
-                  return (
-                    <button
-                      key={cap.id}
-                      type="button"
-                      title={cap.description}
-                      onClick={() => onToggleCapability(cap.id)}
-                      className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                        active
-                          ? "border-blue-500/50 bg-blue-500/10 text-blue-400"
-                          : "border-[var(--border)] bg-[var(--dm-input)] text-[var(--text-muted)] hover:border-[var(--border-hover)]"
-                      }`}
-                    >
-                      {cap.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-          {/* Model Cards Grid with Max Height & Internal Scroll */}
-          <div className="max-h-[380px] overflow-y-auto pr-1">
-            {filteredModels.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--dm-hover-soft)] px-6 py-14 text-center">
-                <Search className="size-5 text-zinc-600" />
-                <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">
+          {/* Model rows */}
+          <div className="max-h-[520px] overflow-y-auto">
+            {sortedModels.length === 0 ? (
+              <div className="grid justify-items-center gap-2 px-6 py-14 text-center">
+                <Search className="size-5 text-mut" strokeWidth={1.7} />
+                <b className="text-[13px] font-medium text-mut2">
                   {isLoadingCapabilities
-                    ? "Loading available runtimes…"
-                    : searchResults.length === 0
-                      ? "No models to show yet"
-                      : "No models match your filters"}
-                </p>
-                <p className="mt-1 text-[11px] text-[var(--text-light)]">
+                    ? "Loading runtimes…"
+                    : isSearching
+                      ? "Searching…"
+                      : searchResults.length === 0
+                        ? "No models to show yet"
+                        : "No models match your search"}
+                </b>
+                <span className="text-[12px] text-mut">
                   {isLoadingCapabilities
                     ? "Fetching runtime capabilities from the backend."
                     : searchResults.length === 0
-                      ? "Search by name to find models on the hub."
-                      : "Try clearing the size filter or changing your search."}
-                </p>
+                      ? "Search by name to find models on the Hub."
+                      : "Try a different query or clear capabilities."}
+                </span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3">
-                {filteredModels.map((model) => (
-                  <ModelCard
+              sortedModels.map((model) => {
+                const isSelected = selectedModel === model.id;
+                return (
+                  <div
                     key={model.id}
-                    model={model}
-                    selected={selectedModel === model.id}
-                    onClick={() => onSelectModel(model.id)}
-                  />
-                ))}
-              </div>
+                    className="border-b border-line last:border-0"
+                  >
+                    <ModelCard
+                      model={model}
+                      selected={isSelected}
+                      onClick={() => onSelectModel(model.id)}
+                    />
+                    {isSelected && (
+                      <div className="border-t border-line bg-band/40 px-4 py-4">
+                        <ModelDetailCard
+                          modelId={selectedModel}
+                          modelDetails={modelDetails}
+                          taskLabel={selectedTaskLabel}
+                          requiredVram={requiredVram}
+                          hfToken={hfToken}
+                          onHfTokenChange={onHfTokenChange}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
-      </div>
-
-      {/* 2. Selected Model Detail Card */}
-      {selectedModel && (
-        <ModelDetailCard
-          modelId={selectedModel}
-          modelDetails={modelDetails}
-          taskLabel={modalities.find((t) => t.id === modality)?.name}
-          requiredVram={requiredVram}
-          hfToken={hfToken}
-          onHfTokenChange={onHfTokenChange}
-        />
-      )}
+      </section>
     </div>
   );
 }

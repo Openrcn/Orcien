@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, ArrowLeft, Check, ChevronRight } from "lucide-react";
+import { cn } from "cn";
 import { Logo } from "@/components/ui/Logos";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/input";
 import {
   createConnection,
   fetchConnection,
@@ -22,9 +24,8 @@ import {
 } from "./api";
 import { ProviderFieldInput } from "./ProviderFieldInput";
 import { JsonArrayInput } from "./JsonArrayInput";
+import { K, AsideCard } from "./kit";
 import { useOrgHref } from "@/lib/org";
-
-const STEPS = ["Provider", "Configuration", "Complete"];
 
 type FlowStatus = "idle" | "verifying" | "saving" | "success" | "error";
 
@@ -35,6 +36,8 @@ interface Props {
 export function ProviderWizard({ connectionId }: Props) {
   const router = useRouter();
   const orgHref = useOrgHref();
+  const searchParams = useSearchParams();
+  const preselect = searchParams.get("provider");
   const isEdit = Boolean(connectionId);
 
   const [providers, setProviders] = useState<ProviderCapability[]>([]);
@@ -103,6 +106,26 @@ export function ProviderWizard({ connectionId }: Props) {
           }).catch(() => {
             // Ignore errors - secret fields will just be empty
           });
+        } else if (preselect) {
+          // Deep link from the providers list ("+" on a provider group).
+          const known = Object.keys(map);
+          const p = list.find(
+            (x) =>
+              x.id === preselect &&
+              (known.length === 0 || map[x.id] !== undefined),
+          );
+          if (p) {
+            const schema = map[p.id] || p.schema || [];
+            const defaults: Record<string, unknown> = {};
+            schema.forEach((f) => {
+              if (f.default) defaults[f.key] = f.default;
+              if (f.type === "boolean" && !f.default) defaults[f.key] = false;
+            });
+            setSelected(p);
+            setName(`${p.id}-connection`);
+            setValues(defaults);
+            setStep(2);
+          }
         }
       })
       .catch((e: unknown) =>
@@ -112,7 +135,7 @@ export function ProviderWizard({ connectionId }: Props) {
     return () => {
       active = false;
     };
-  }, [connectionId]);
+  }, [connectionId, preselect]);
 
   const available = useMemo(() => {
     if (!providers.length) return [];
@@ -141,18 +164,30 @@ export function ProviderWizard({ connectionId }: Props) {
     );
   }, [connections, selected, name, connectionId]);
 
-  const canConnect = useMemo(() => {
-    if (!name.trim() || nameTaken) return false;
-    return fields
-      .filter((f) => f.required)
-      .every((f) => {
+  const requiredFields = useMemo(
+    () => fields.filter((f) => f.required),
+    [fields],
+  );
+
+  const filledRequired = useMemo(
+    () =>
+      requiredFields.filter((f) => {
         if (f.type === "file") return Boolean(files[f.key]);
         const v = values[f.key];
         return v !== undefined && v !== null && v !== "";
-      });
-  }, [name, nameTaken, fields, values, files]);
+      }).length,
+    [requiredFields, values, files],
+  );
+
+  const canConnect = useMemo(() => {
+    if (!name.trim() || nameTaken) return false;
+    return filledRequired === requiredFields.length;
+  }, [name, nameTaken, filledRequired, requiredFields]);
 
   function chooseProvider(p: ProviderCapability) {
+    // Editing locks the provider: switching would orphan the connection id
+    // (provider is immutable on update). Create a new connection instead.
+    if (isEdit) return;
     setSelected(p);
     setName(`${p.id}-connection`);
     setFiles({});
@@ -220,283 +255,449 @@ export function ProviderWizard({ connectionId }: Props) {
   const busy = status === "verifying" || status === "saving";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-1.5 text-xs text-[var(--text-light)]">
-        <button
-          type="button"
-          onClick={() => router.push(orgHref("/providers"))}
-          className="transition-colors hover:text-[var(--dm-text-3)]"
-        >
-          Providers
-        </button>
-        <span>/</span>
-        <span className="text-[var(--dm-text-3)]">
-          {isEdit ? "Edit Provider" : "Add Provider"}
-        </span>
-      </div>
-
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={() =>
-            step > 1 && !busy ? setStep(step - 1) : router.push(orgHref("/providers"))
-          }
-          disabled={busy}
-          title={step > 1 ? "Back" : "Back to providers"}
-          className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-main)] disabled:opacity-50"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
+    <div className="mx-auto w-full max-w-[1360px]">
+      {/* Page header */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-main)]">
-            {isEdit ? "Edit Provider" : "Add Provider"}
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-.03em]">
+            {isEdit
+              ? `Edit ${selected?.name ?? "provider"}`
+              : selected
+                ? `Connect ${selected.name}`
+                : "Connect a provider"}
           </h1>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <p className="mt-1.5 text-[13.5px] text-mut2">
+            Step {step} of 3 ·{" "}
             {step === 1
-              ? "Select a cloud or compute provider to connect to ORCN."
+              ? "Select a cloud or compute provider"
               : step === 2
                 ? isEdit
-                  ? "Update the credentials and configuration, then save to re-verify."
-                  : "Enter your provider credentials and configuration details."
-                : "Your provider has been connected to ORCN."}
+                  ? "Update credentials, then save to re-verify"
+                  : "Enter credentials and configuration"
+                : "Done"}
           </p>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="ml-auto"
+          disabled={busy}
+          onClick={() => {
+            if (isEdit) {
+              router.push(orgHref("/providers"));
+              return;
+            }
+            if (step > 1) setStep(step - 1);
+            else router.push(orgHref("/providers"));
+          }}
+        >
+          <ArrowLeft className="size-4" strokeWidth={1.7} />
+          {isEdit ? "Back to providers" : step > 1 ? "Back" : "Providers"}
+        </Button>
       </div>
 
-      <StepDots
-        current={step}
-        onStepClick={(s) => s < step && !busy && setStep(s)}
-      />
-
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-xs text-[var(--text-muted)]">
-          <Loader2 className="size-4 animate-spin" />
+        <div className="flex items-center gap-2.5 py-16 text-[13px] text-mut">
+          <span className="size-4 animate-spin rounded-full border-2 border-line2 border-t-accent" />
           Loading providers…
         </div>
-      ) : step === 1 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {available.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => chooseProvider(p)}
-              className="group relative flex flex-col rounded-2xl border border-[var(--dm-card-border)] bg-[var(--card-bg)] p-5 text-left transition-all duration-150 hover:border-blue-500/50 hover:bg-[var(--dm-card-hover)] hover:shadow-[0_0_18px_rgba(59,130,246,0.12)]"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--dm-inset)] p-3">
-                  <Logo name={p.id} size={30} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-base font-semibold text-[var(--text-main)]">
-                    {p.name}
+      ) : (
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          {/* ===== Left: main content ===== */}
+          <div className="space-y-5">
+            {step === 1 ? (
+              <>
+                <section className={K.dbx}>
+                  <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-3">
+                    <h3 className="text-[15px] font-semibold tracking-[-.01em]">
+                      Available providers
+                    </h3>
+                    <span className="text-[13px] text-mut">
+                      {available.length} connectable
+                    </span>
                   </div>
-                  <span className="mt-1 inline-block rounded bg-[var(--dm-chip)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-                    {p.type}
+                  <div className={K.inner}>
+                    {available.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => chooseProvider(p)}
+                        className="grid w-full grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-line px-4 py-3 text-left transition last:border-0 hover:bg-fg/[.03]"
+                      >
+                        <span className="grid size-[30px] flex-none place-items-center rounded-[9px] border border-line bg-card">
+                          <Logo name={p.id} size={16} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2">
+                            <b className="truncate text-[13.5px] font-medium">
+                              {p.name}
+                            </b>
+                            <span className={cn(K.pill, "capitalize")}>
+                              {p.type}
+                            </span>
+                          </span>
+                          <small className="block truncate text-[12.5px] text-mut">
+                            {p.description || "Connect this provider to Orcien."}
+                          </small>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="flex gap-1.5 max-md:hidden">
+                            {(p.features ?? []).slice(0, 2).map((feat) => (
+                              <span key={feat} className={K.pill}>
+                                {feat}
+                              </span>
+                            ))}
+                          </span>
+                          <ChevronRight
+                            className="size-4 text-mut"
+                            strokeWidth={1.7}
+                          />
+                        </span>
+                      </button>
+                    ))}
+                    {available.length === 0 && (
+                      <div className={cn(K.kv, "text-mut")}>
+                        No connectable providers available.
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Bottom explainer — cures the "plain" step-1 feel without a revamp */}
+                <section className={K.dbx}>
+                  <div className="px-3 pb-2.5 pt-3">
+                    <h3 className="text-[13px] font-semibold tracking-[-.01em]">What happens next</h3>
+                    <p className="mt-0.5 text-[12px] text-mut">Picked provider controls the fields on the next screen.</p>
+                  </div>
+                  <div className={K.inner}>
+                    <div className={cn(K.kv, "items-start gap-3 py-3")}>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line bg-card text-mut2">1</span>
+                      <span className="min-w-0">
+                        <b className="block text-[12.5px] font-medium">Choose & continue</b>
+                        <span className="block text-[12px] leading-snug text-mut">Click any provider above — we’ll preload its credential schema.</span>
+                      </span>
+                    </div>
+                    <div className={cn(K.kv, "items-start gap-3 py-3")}>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line bg-card text-mut2">2</span>
+                      <span className="min-w-0">
+                        <b className="block text-[12.5px] font-medium">Stored securely</b>
+                        <span className="block text-[12px] leading-snug text-mut">Secrets are encrypted at rest and never shown again in plain text.</span>
+                      </span>
+                    </div>
+                    <div className={cn(K.kv, "items-start gap-3 py-3")}>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line bg-card text-mut2">3</span>
+                      <span className="min-w-0">
+                        <b className="block text-[12.5px] font-medium">Live verification</b>
+                        <span className="block text-[12px] leading-snug text-mut">We ping the provider with your credentials before the connection is saved.</span>
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              </>
+            ) : step === 2 && selected ? (
+              <section className={K.dbx}>
+                <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-3">
+                  <h3 className="text-[15px] font-semibold tracking-[-.01em]">
+                    Connection details
+                  </h3>
+                  <span className="text-[13px] text-mut">
+                    {isEdit ? "Update credentials & configuration" : "Credentials & configuration"}
                   </span>
                 </div>
-              </div>
 
-              {p.description && (
-                <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
-                  {p.description}
-                </p>
-              )}
+                <div className={cn(K.inner, "grid gap-4 p-5")}>
+                  <div className="grid gap-1.5">
+                    <label className={K.lbl}>
+                      Connection name <span className="text-bad">*</span>
+                    </label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={`${selected.id}-connection`}
+                      aria-invalid={nameTaken || undefined}
+                      className="font-mono text-[13px]"
+                    />
+                    {nameTaken && (
+                      <p className="text-xs text-bad">
+                        A {providerLabel(selected.id)} connection with this name
+                        already exists.
+                      </p>
+                    )}
+                  </div>
 
-              {(p.features?.length ?? 0) > 0 && (
-                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[var(--dm-divider)] pt-3">
-                  {p.features!.map((feat) => (
-                    <span
-                      key={feat}
-                      className="rounded-md border border-[var(--dm-chip-border)] bg-[var(--dm-inset)] px-2 py-1 text-[10px] text-[var(--text-muted)]"
-                    >
-                      {feat}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </button>
-          ))}
-          {available.length === 0 && (
-            <p className="text-xs text-[var(--text-muted)]">
-              No connectable providers available.
-            </p>
-          )}
-        </div>
-      ) : step === 2 && selected ? (
-        <div className="rounded-xl border border-[var(--dm-divider)] bg-[var(--dm-card)] p-5">
-          <div className="flex items-center justify-center gap-3 border-b border-[var(--dm-divider)] pb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-inset)] p-2">
-              <Logo name={selected.id} size={22} />
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-semibold text-[var(--text-main)]">
-                {selected.name}
-              </div>
-              <div className="text-[11px] text-[var(--text-muted)]">
-                {isEdit ? "Update connection" : "Configure connection"}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-[var(--dm-text-3)]">
-                Connection Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={`${selected.id}-connection`}
-                className={`h-9 w-full rounded-lg border bg-[var(--dm-inset)] px-3 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:outline-none ${
-                  nameTaken
-                    ? "border-red-500/50 focus:border-red-500"
-                    : "border-[var(--border)] focus:border-blue-500"
-                }`}
-              />
-              {nameTaken && (
-                <p className="text-[10px] text-red-400">
-                  A {providerLabel(selected.id)} connection with this name
-                  already exists.
-                </p>
-              )}
-            </div>
-
-            {fields.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">
-                This provider does not require any credentials.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {fields.map((field) => {
-                  const isArray = field.type === "json_array" || field.type === "string_array" || field.type === "number_array";
-                  return (
-                    <div key={field.key} className={`space-y-1.5 ${isArray ? "sm:col-span-2" : ""}`}>
-                      <label className="block text-xs font-medium text-[var(--dm-text-3)]">
-                        {field.name}
-                        {field.required && (
-                          <span className="ml-0.5 text-red-400">*</span>
-                        )}
-                      </label>
-                      {isArray ? (
-                        <JsonArrayInput
-                          value={values[field.key] as string}
-                          onChange={(value) => setValues((v) => ({ ...v, [field.key]: value }))}
-                          schema={field.array_item_schema || { type: "object" }}
-                          addButtonLabel={field.placeholder || "Add Item"}
-                          emptyMessage={field.description || "No items yet"}
-                        />
-                      ) : (
-                        <ProviderFieldInput
-                          field={field}
-                          value={values[field.key]}
-                          file={files[field.key] || null}
-                          onChange={(key, value) =>
-                            setValues((v) => ({ ...v, [key]: value }))
-                          }
-                          onFileChange={(key, file) =>
-                            setFiles((f) => {
-                              const next = { ...f };
-                              if (file) next[key] = file;
-                              else delete next[key];
-                              return next;
-                            })
-                          }
-                        />
-                      )}
-                      {field.description && (
-                        <p className="text-[10px] text-[var(--text-light)]">
-                          {field.description}
-                        </p>
-                      )}
+                  {fields.length === 0 ? (
+                    <p className="text-[13px] text-mut">
+                      This provider does not require any credentials.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {fields.map((field) => {
+                        const isArray = field.type === "json_array" || field.type === "string_array" || field.type === "number_array";
+                        return (
+                          <div key={field.key} className={`grid content-start gap-1.5 ${isArray ? "sm:col-span-2" : ""}`}>
+                            <label className={K.lbl}>
+                              {field.name}
+                              {field.required && (
+                                <span className="ml-0.5 text-bad">*</span>
+                              )}
+                            </label>
+                            {isArray ? (
+                              <JsonArrayInput
+                                value={values[field.key] as string}
+                                onChange={(value) => setValues((v) => ({ ...v, [field.key]: value }))}
+                                schema={field.array_item_schema || { type: "object" }}
+                                addButtonLabel={field.placeholder || "Add Item"}
+                                emptyMessage={field.description || "No items yet"}
+                              />
+                            ) : (
+                              <ProviderFieldInput
+                                field={field}
+                                value={values[field.key]}
+                                file={files[field.key] || null}
+                                onChange={(key, value) =>
+                                  setValues((v) => ({ ...v, [key]: value }))
+                                }
+                                onFileChange={(key, file) =>
+                                  setFiles((f) => {
+                                    const next = { ...f };
+                                    if (file) next[key] = file;
+                                    else delete next[key];
+                                    return next;
+                                  })
+                                }
+                              />
+                            )}
+                            {field.description && (
+                              <p className="text-xs text-mut">{field.description}</p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {error && (
+                    <div className="flex items-start gap-2 rounded-xl border border-bad/30 bg-bad/10 px-3.5 py-2.5 text-[13px] text-bad">
+                      <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={1.7} />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : (
+              <section className={K.dbx}>
+                <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-3">
+                  <h3 className="text-[15px] font-semibold tracking-[-.01em]">
+                    {isEdit ? "Provider updated" : "Provider connected"}
+                  </h3>
+                  <span className={K.ok}>
+                    <i className="size-1.5 rounded-full bg-current" />
+                    Verified
+                  </span>
+                </div>
+                <div className={cn(K.inner, "p-8 text-center")}>
+                  <div className="mx-auto grid size-12 place-items-center rounded-full border border-ok/25 bg-ok/10">
+                    <Check className="size-6 text-ok" strokeWidth={1.7} />
+                  </div>
+                  <h2 className="mt-4 text-lg font-semibold tracking-[-.02em]">
+                    {providerLabel(created?.Provider || selected?.id || "")} is
+                    ready to use
+                  </h2>
+                  <p className="mt-1 text-[13px] text-mut2">
+                    Credentials were verified and the connection has been{" "}
+                    {isEdit ? "updated" : "saved"}.
+                  </p>
+
+                  <div className="mx-auto mt-5 max-w-md overflow-hidden rounded-xl border border-line bg-band text-left">
+                    <Row label="Connection" value={created?.Name || name} />
+                    <Row
+                      label="Provider"
+                      value={providerLabel(created?.Provider || selected?.id || "")}
+                    />
+                    <Row label="Status" value={created?.Status || "verified"} success />
+                  </div>
+                </div>
+              </section>
             )}
-
-            {error && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-                <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
           </div>
 
-          <div className="mt-5 flex items-center justify-between border-t border-[var(--dm-divider)] pt-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => (isEdit ? router.push(orgHref("/providers")) : setStep(1))}
-              disabled={busy}
-            >
-              <ArrowLeft className="size-3.5" /> Back
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={!canConnect || busy}
-            >
-              {busy ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  {status === "verifying" ? "Verifying…" : "Saving…"}
-                </>
-              ) : isEdit ? (
-                "Save & Verify"
-              ) : (
-                "Connect"
-              )}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-[var(--dm-divider)] bg-[var(--dm-card)] p-6 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15">
-            <Check className="size-6 text-emerald-400" />
-          </div>
-          <h2 className="mt-4 text-lg font-semibold text-[var(--text-main)]">
-            {isEdit ? "Provider Updated" : "Provider Connected"}
-          </h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            {providerLabel(created?.Provider || selected?.id || "")} has been
-            successfully {isEdit ? "updated" : "connected"}.
-          </p>
-
-          <div className="mx-auto mt-5 max-w-md space-y-2 rounded-lg border border-[var(--dm-divider)] bg-[var(--dm-inset)] p-4 text-left text-xs">
-            <Row label="Connection" value={created?.Name || name} />
-            <Row
-              label="Provider"
-              value={providerLabel(created?.Provider || selected?.id || "")}
-            />
-            <Row label="Status" value={created?.Status || "verified"} success />
-          </div>
-
-          <div className="mt-6 flex justify-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => router.push(orgHref("/providers"))}
-            >
-              Done
-            </Button>
-            {!isEdit && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setStep(1);
-                  setSelected(null);
-                  setCreated(null);
-                  setStatus("idle");
-                  setError("");
-                }}
+          {/* ===== Right: summary rail ===== */}
+          <aside className="xl:sticky xl:top-[76px]">
+            {step === 2 && selected ? (
+              <AsideCard
+                title="Connection"
+                right={
+                  <span className={canConnect ? K.ok : K.off}>
+                    {canConnect ? "Ready" : "Incomplete"}
+                  </span>
+                }
+                footer={
+                  <>
+                    <Button
+                      className="w-full"
+                      onClick={handleSubmit}
+                      disabled={!canConnect || busy}
+                    >
+                      {busy && (
+                        <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-70" />
+                      )}
+                      {busy
+                        ? status === "verifying"
+                          ? "Verifying…"
+                          : "Saving…"
+                        : isEdit
+                          ? "Save & Verify"
+                          : "Connect"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      disabled={busy}
+                      onClick={() =>
+                        isEdit ? router.push(orgHref("/providers")) : setStep(1)
+                      }
+                    >
+                      <ArrowLeft className="size-4" strokeWidth={1.7} /> Back
+                    </Button>
+                  </>
+                }
               >
-                Add Another Provider
-              </Button>
-            )}
-          </div>
+                <div className={K.kv}>
+                  <span className="flex-1 text-mut2">Provider</span>
+                  <span className="flex min-w-0 items-center gap-2 font-medium">
+                    <Logo name={selected.id} size={14} />
+                    <span className="truncate">{selected.name}</span>
+                  </span>
+                </div>
+                <div className={K.kv}>
+                  <span className="flex-1 text-mut2">Type</span>
+                  <b className="font-medium capitalize">{selected.type}</b>
+                </div>
+                <div className={K.kv}>
+                  <span className="flex-1 text-mut2">Name</span>
+                  <b className="max-w-[160px] truncate font-mono text-[12.5px] font-medium">
+                    {name || "—"}
+                  </b>
+                </div>
+                <div className={K.kv}>
+                  <span className="flex-1 text-mut2">Required fields</span>
+                  <b className="font-medium">
+                    {filledRequired} / {requiredFields.length}
+                  </b>
+                </div>
+              </AsideCard>
+            ) : step >= 3 ? (
+              <AsideCard
+                title="Next steps"
+                footer={
+                  <>
+                    <Button
+                      className="w-full"
+                      onClick={() => router.push(orgHref("/providers"))}
+                    >
+                      Back to providers
+                    </Button>
+                    {!isEdit && (
+                      <Button
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => {
+                          setStep(1);
+                          setSelected(null);
+                          setCreated(null);
+                          setStatus("idle");
+                          setError("");
+                        }}
+                      >
+                        Add another provider
+                      </Button>
+                    )}
+                  </>
+                }
+              >
+                <div className={cn(K.kv, "text-mut2")}>
+                  Deploy workloads on this connection from the Deployments page.
+                </div>
+              </AsideCard>
+            ) : null}
+            <StepsCard step={step} isEdit={isEdit} providerName={selected?.name} />
+          </aside>
         </div>
       )}
     </div>
+  );
+}
+
+function StepsCard({
+  step,
+  isEdit,
+  providerName,
+}: {
+  step: number;
+  isEdit?: boolean;
+  providerName?: string;
+}) {
+  const items = [
+    {
+      id: 1,
+      title: "Select provider",
+      desc: isEdit && providerName ? `Editing ${providerName} — locked` : providerName ? `Picked ${providerName}` : "Choose the provider to connect",
+    },
+    {
+      id: 2,
+      title: isEdit ? "Update credentials" : "Configure access",
+      desc: "Required fields vary by provider",
+    },
+    {
+      id: 3,
+      title: "Verify & save",
+      desc: `We test the key then ${isEdit ? "re-save" : "save"} it encrypted`,
+    },
+  ];
+
+  return (
+    <AsideCard title="Steps" right={<span className={K.pill}>{step} / 3</span>}>
+      {items.map((it) => {
+        const isDone = step > it.id;
+        const isCurrent = step === it.id;
+        return (
+          <div key={it.id} className={cn(K.kv, "items-start gap-3 !py-3")}>
+            <span
+              className={cn(
+                "grid size-6 shrink-0 place-items-center rounded-full border text-[11px] font-semibold leading-none",
+                isDone
+                  ? "border-ok/20 bg-ok text-white"
+                  : isCurrent
+                    ? "border-accent bg-accent text-accent-foreground"
+                    : "border-line2 bg-card text-mut",
+              )}
+            >
+              {isDone ? <Check className="size-3.5" strokeWidth={2.5} /> : it.id}
+            </span>
+            <span className="min-w-0">
+              <b className={cn("block text-[12.5px] leading-tight", isCurrent ? "text-fg" : isDone ? "text-fg/90" : "text-mut2")}>
+                {it.title}
+              </b>
+              <span className="block text-[11.5px] leading-snug text-mut">{it.desc}</span>
+            </span>
+            {isCurrent && (
+              <span className="ml-auto inline-flex h-5 shrink-0 items-center rounded-full bg-accent px-2 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">Current</span>
+            )}
+          </div>
+        );
+      })}
+      <div className="border-t border-line bg-band/40 px-4 py-2.5 text-[11px] leading-snug text-mut">
+        {isEdit ? (
+          <>Editing keeps the same connection ID — create a new connection to change provider.</>
+        ) : step === 1 ? (
+          <>Fields and validation on the next screen are driven by the provider you pick.</>
+        ) : step === 2 ? (
+          <>Secrets stay encrypted at rest; they’re only sent for verification when you click Connect.</>
+        ) : (
+          <>Connection ready — use it when deploying models or workloads.</>
+        )}
+      </div>
+    </AsideCard>
   );
 }
 
@@ -510,75 +711,12 @@ function Row({
   success?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[var(--text-muted)]">{label}</span>
-      <span className="flex items-center gap-1.5 font-medium text-[var(--text-main)]">
-        {success && <span className="size-1.5 rounded-full bg-emerald-400" />}
+    <div className={K.kv}>
+      <span className="flex-1 text-mut2">{label}</span>
+      <span className="flex items-center gap-1.5 font-medium">
+        {success && <span className="size-1.5 rounded-full bg-ok" />}
         {value}
       </span>
-    </div>
-  );
-}
-
-function StepDots({
-  current,
-  onStepClick,
-}: {
-  current: number;
-  onStepClick?: (step: number) => void;
-}) {
-  return (
-    <div className="flex items-center">
-      {STEPS.map((label, i) => {
-        const step = i + 1;
-        const done = current > step;
-        const active = current === step;
-        const clickable = step < current;
-        return (
-          <div key={label} className="flex items-center">
-            <button
-              type="button"
-              disabled={!clickable}
-              onClick={() => onStepClick?.(step)}
-              className={`flex items-center gap-2.5 ${
-                clickable ? "cursor-pointer" : "cursor-default"
-              }`}
-            >
-              <span
-                className={`flex size-4 items-center justify-center rounded-[4px] border text-[10px] ${
-                  done || active
-                    ? "border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]"
-                    : "border-[var(--border)] bg-[var(--dm-tag)] text-[var(--text-light)]"
-                }`}
-              >
-                {done ? (
-                  <Check className="size-2.5 stroke-[3] text-blue-400" />
-                ) : active ? (
-                  <span className="size-1.5 rounded-[1px] bg-blue-400" />
-                ) : null}
-              </span>
-              <span
-                className={`text-xs font-medium whitespace-nowrap ${
-                  active
-                    ? "text-[var(--text-main)]"
-                    : done
-                      ? "text-[var(--dm-text-3)]"
-                      : "text-[var(--text-light)]"
-                }`}
-              >
-                {label}
-              </span>
-            </button>
-            {i < STEPS.length - 1 && (
-              <div
-                className={`mx-4 h-px w-12 shrink-0 ${
-                  current > step ? "bg-zinc-600" : "bg-[var(--border)]"
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }

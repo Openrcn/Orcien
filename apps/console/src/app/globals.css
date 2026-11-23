@@ -6,10 +6,38 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --bg-color: #fafafa;
+  /* ===== ORCN UI kit tokens (light) — RGB triplets so /opacity modifiers work ===== */
+  --bg: 255 255 255;
+  --band: 247 247 247;
+  --card: 255 255 255;
+  --field: 255 255 255;
+  --line: 232 232 232;
+  --line2: 212 212 212;
+  --fg: 29 29 29;
+  --mut: 140 140 140;
+  --mut2: 89 89 89;
+  --accent: 77 124 15;
+  --accent-t: 63 98 18;
+  --on-accent: 255 255 255;
+  --ok: 27 138 75;
+  --warn: 184 110 0;
+  --bad: 201 48 44;
+  --bt: #d4d4d4;
+  --bb: #d4d4d4;
+  --hi: transparent;
+  --sh: none;
+  --pri-from: #5a8f12;
+  --pri-to: #4d7c0f;
+  --pri-border: #3f6212;
+  --pri-text: #ffffff;
+  --logo1: #4d7c0f;
+  --logo2: #84cc16;
+
+  --bg-color: rgb(var(--bg));
   --card-bg: #f7f7f7; /* card/box background — tune this to taste */
   --font-body:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
   --font-display:
     "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, sans-serif;
@@ -26,7 +54,6 @@
   --primary-hover: #1a1a1a;
   --primary-foreground: oklch(0.985 0 0);
 
-  --accent: oklch(0.97 0 0);
   --accent-soft: #eef4ff;
   --accent-border: #c7d7fe;
   --accent-glow: rgb(59 130 246 / 0.16);
@@ -97,7 +124,6 @@
   --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
@@ -236,6 +262,20 @@
 @theme inline {
   --font-heading: var(--font-display);
   --font-sans: var(--font-body);
+  /* ORCN UI kit colors */
+  --color-bg: rgb(var(--bg));
+  --color-band: rgb(var(--band));
+  --color-field: rgb(var(--field));
+  --color-line: rgb(var(--line));
+  --color-line2: rgb(var(--line2));
+  --color-fg: rgb(var(--fg));
+  --color-mut: rgb(var(--mut));
+  --color-mut2: rgb(var(--mut2));
+  --color-accent-t: rgb(var(--accent-t));
+  --color-on-accent: rgb(var(--on-accent));
+  --color-ok: rgb(var(--ok));
+  --color-warn: rgb(var(--warn));
+  --color-bad: rgb(var(--bad));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -254,7 +294,7 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
+  --color-accent: rgb(var(--accent));
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -264,7 +304,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+  --color-card: rgb(var(--card));
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -277,7 +317,34 @@
 }
 
 .dark {
-  --bg-color: #09090b;
+  /* ===== ORCN UI kit tokens (dark) ===== */
+  --bg: 12 12 14;
+  --band: 16 16 18;
+  --card: 21 21 23;
+  --field: 24 24 27;
+  --line: 36 36 40;
+  --line2: 51 51 58;
+  --fg: 237 237 240;
+  --mut: 138 138 149;
+  --mut2: 176 176 186;
+  --accent: 163 230 53;
+  --accent-t: 190 242 100;
+  --on-accent: 16 23 15;
+  --ok: 88 192 138;
+  --warn: 224 170 90;
+  --bad: 239 118 118;
+  --bt: rgba(255, 255, 255, 0.15);
+  --bb: rgba(255, 255, 255, 0.045);
+  --hi: rgba(255, 255, 255, 0.055);
+  --sh: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --pri-from: #bef264;
+  --pri-to: #a3e635;
+  --pri-border: #d9f99d;
+  --pri-text: #10170f;
+  --logo1: #a3e635;
+  --logo2: #d9f99d;
+
+  --bg-color: rgb(var(--bg));
   --card-bg: #0e0e10; /* card/box background — tune this to taste */
   --surface: #121215;
   --surface-hover: #1f1f23;
@@ -342,7 +409,6 @@
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -353,7 +419,6 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
   --accent-soft: rgb(59 130 246 / 0.12);
   --accent-border: rgb(96 165 250 / 0.35);
   --accent-glow: rgb(59 130 246 / 0.2);
@@ -385,4 +450,45 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ===== ORCN UI kit custom utilities ===== */
+
+/* 1px gradient border, card-coloured fill (secondary buttons, selects in tables) */
+@utility gb {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgb(var(--card)), rgb(var(--card))) padding-box,
+    linear-gradient(180deg, var(--bt), var(--bb)) border-box;
+}
+
+/* same, field-coloured fill + accent focus ring (inputs, textareas, select triggers) */
+@utility gb-f {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgb(var(--field)), rgb(var(--field))) padding-box,
+    linear-gradient(180deg, var(--bt), var(--bb)) border-box;
+  &:focus,
+  &:focus-within,
+  &[aria-expanded="true"],
+  &[data-popup-open] {
+    border-color: transparent;
+    background:
+      linear-gradient(rgb(var(--field)), rgb(var(--field))) padding-box,
+      linear-gradient(
+          180deg,
+          rgb(var(--accent)),
+          rgb(var(--accent) / 0.35)
+        )
+        border-box;
+    box-shadow: 0 0 0 4px rgb(var(--accent) / 0.16);
+  }
+}
+
+/* primary green button: gradient fill + light border + inset highlight */
+@utility btn-pri {
+  background: linear-gradient(180deg, var(--pri-from), var(--pri-to));
+  border-color: var(--pri-border);
+  color: var(--pri-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }

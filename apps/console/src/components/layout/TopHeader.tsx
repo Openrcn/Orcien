@@ -1,98 +1,134 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { PanelLeft, Search, Sun, Moon } from "lucide-react";
+import { useOrg } from "@/lib/org";
 
-export function TopHeader({ sidebarWidth }: { sidebarWidth: number }) {
-  const [showAllOrgs, setShowAllOrgs] = useState(false);
+const SECTION_LABELS: Record<string, string> = {
+  deployments: "Deployments",
+  models: "AI models",
+  providers: "Providers",
+  templates: "Templates",
+};
+
+function labelFor(segment: string) {
+  return (
+    SECTION_LABELS[segment] ??
+    segment.charAt(0).toUpperCase() + segment.slice(1)
+  );
+}
+
+export function TopHeader({
+  sidebarWidth,
+  isCollapsed,
+  setIsCollapsed,
+}: {
+  sidebarWidth: number;
+  isCollapsed: boolean;
+  setIsCollapsed: (value: boolean) => void;
+}) {
+  const pathname = usePathname();
+  const { slug } = useOrg();
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggleTheme = () => {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    if (nextDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  };
+
+  // Breadcrumb segments after the org slug (e.g. /acme/models/deploy).
+  const segments = pathname.split("/").filter(Boolean);
+  const offset = slug ? 1 : 0;
+  const crumbs = segments.slice(offset).map((segment, i) => ({
+    label: labelFor(segment),
+    href: "/" + segments.slice(0, offset + i + 1).join("/"),
+  }));
+
   return (
     <header
-      style={{
-        position: "fixed",
-        top: 0,
-        left: `${sidebarWidth}px`,
-        right: 0,
-        height: "56px",
-        backgroundColor: "var(--background)",
-        borderBottom: "1px solid var(--border)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 1.5rem",
-        transition: "left 0.2s ease",
-        zIndex: 30,
-      }}
+      style={{ left: `${sidebarWidth}px` }}
+      className="fixed top-0 right-0 z-30 flex h-14 items-center gap-2.5 border-b border-line bg-bg/80 px-8 backdrop-blur-md transition-[left] duration-200 max-md:px-4"
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <button
-          title="Organization Switcher (Reserved)"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.4rem 0.615rem",
-            borderRadius: "6px",
-            border: "1px solid var(--border)",
-            backgroundColor: showAllOrgs ? "var(--surface-hover)" : "var(--surface)",
-            color: "var(--text-main)",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
-            cursor: "pointer",
-            transition: "background-color 0.15s ease",
-          }}
-          onClick={() => setShowAllOrgs(!showAllOrgs)}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "var(--surface-hover)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor = showAllOrgs ? "var(--surface-hover)" : "var(--surface)")
-          }
-        >
-          {/* Organization Switcher */}
-          <span>{showAllOrgs ? "All Orgs" : "Single Org"}</span>
-          <ChevronDown size={14} />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        aria-label="Toggle sidebar"
+        className="inline-grid size-[34px] flex-none place-items-center rounded-[9px] text-mut2 transition hover:bg-fg/5 hover:text-fg"
+      >
+        <PanelLeft className="size-4" strokeWidth={1.7} />
+      </button>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.25rem 0.5rem",
-            borderRadius: "20px",
-            backgroundColor: "var(--surface-hover)",
-            border: "1px solid var(--border)",
-          }}
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 items-center gap-2.5 whitespace-nowrap text-mut2"
+      >
+        <Link
+          href={slug ? `/${slug}` : "/"}
+          className="font-medium transition hover:text-fg"
         >
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "50%",
-              backgroundColor: "var(--primary)",
-              color: "var(--primary-foreground)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-            }}
-          >
-            V
-          </div>
-          <span
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 500,
-              color: "var(--text-main)",
-              paddingRight: "0.25rem",
-            }}
-          >
-            Vinit
-          </span>
-        </div>
+          {slug ?? "orcien"}
+        </Link>
+        {crumbs.map((crumb, i) => {
+          const isLast = i === crumbs.length - 1;
+          return (
+            <span
+              key={crumb.href}
+              className="inline-flex items-center gap-2.5"
+            >
+              <span className="text-line2">/</span>
+              {isLast ? (
+                <span className="text-fg" aria-current="page">
+                  {crumb.label}
+                </span>
+              ) : (
+                <Link
+                  href={crumb.href}
+                  className="transition hover:text-fg"
+                >
+                  {crumb.label}
+                </Link>
+              )}
+            </span>
+          );
+        })}
+      </nav>
+
+      <div className="ml-auto flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="Search"
+          className="inline-grid size-[34px] place-items-center rounded-[9px] text-mut2 transition hover:bg-fg/5 hover:text-fg"
+        >
+          <Search className="size-4" strokeWidth={1.7} />
+        </button>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="inline-grid size-[34px] place-items-center rounded-[9px] text-mut2 transition hover:bg-fg/5 hover:text-fg"
+        >
+          {isDark ? (
+            <Sun className="size-4" strokeWidth={1.7} />
+          ) : (
+            <Moon className="size-4" strokeWidth={1.7} />
+          )}
+        </button>
+        <span className="ml-1.5 grid size-7 place-items-center rounded-full border border-line2 bg-accent/10 font-mono text-[11px]">
+          V
+        </span>
       </div>
     </header>
   );

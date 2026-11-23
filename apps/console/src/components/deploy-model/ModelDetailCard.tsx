@@ -1,7 +1,9 @@
 "use client";
 
-import { ExternalLink, KeyRound, Tag } from "lucide-react";
-import { Logo } from "@/components/ui/Logos";
+import { ExternalLink, KeyRound } from "lucide-react";
+import { cn } from "cn";
+import { Input } from "@/components/ui/input";
+import { K } from "@/components/providers/kit";
 import { ModelDetails } from "./model-types";
 import {
   CONTEXT_KEYS,
@@ -21,6 +23,7 @@ interface ModelDetailCardProps {
   onHfTokenChange: (token: string) => void;
 }
 
+/* Kit content block shown inline inside the expanded model row. */
 export function ModelDetailCard({
   modelId,
   modelDetails,
@@ -34,274 +37,137 @@ export function ModelDetailCard({
   const modelName = modelId.split("/").pop() || "";
   const org = modelDetails?.author || modelId.split("/")[0] || "";
 
-  // Derive parameters
   const paramsCount = modelDetails?.safetensors?.total
     ? `${(modelDetails.safetensors.total / 1e9).toFixed(0)}B`
     : typeof modelDetails?.parameters === "number"
       ? `${modelDetails.parameters}B`
       : modelId.match(/(\d+)b/i)?.[1]
         ? `${modelId.match(/(\d+)b/i)?.[1]}B`
-        : "-";
+        : "—";
 
-  // Derive context length (falls back to text_config etc. for multimodal models)
-  const contextValue = resolveConfigNumber(
-    modelDetails?.config,
-    CONTEXT_KEYS,
-  );
+  const contextValue = resolveConfigNumber(modelDetails?.config, CONTEXT_KEYS);
   const contextLength =
-    contextValue !== undefined
-      ? `${Math.round(contextValue / 1024)}K`
-      : "-";
+    contextValue !== undefined ? `${Math.round(contextValue / 1024)}K` : "—";
 
-  // Derive layers (falls back to text_config etc. for multimodal models)
   const layersValue = resolveConfigNumber(modelDetails?.config, LAYERS_KEYS);
-  const layers = layersValue !== undefined ? layersValue : "-";
+  const layers = layersValue !== undefined ? layersValue : "—";
 
-  // Derive dtype (falls back to text_config etc. for multimodal models)
   const dtype =
     resolveConfigString(modelDetails?.config, DTYPE_KEYS) ||
     (modelDetails?.safetensors?.parameters
       ? Object.keys(modelDetails.safetensors.parameters)[0]
       : modelDetails?.quantization) ||
-    "-";
+    "—";
 
-  // Derive architecture
   const architecture =
-    modelDetails?.config?.architectures?.[0] || modelDetails?.family || "-";
-
-  // Derive model type
+    modelDetails?.config?.architectures?.[0] || modelDetails?.family || "—";
   const modelType =
     modelDetails?.config?.model_type ||
     (modelId.toLowerCase().includes("instruct") ? "instruct" : "base");
-
-  // Derive license
-  const license = modelDetails?.cardData?.license || "-";
-
-  // Derive last updated
+  const license = modelDetails?.cardData?.license || "—";
   const lastUpdated = modelDetails?.lastModified
     ? new Date(modelDetails.lastModified).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       })
-    : "-";
-
-  // Derive vocabulary size (falls back to text_config etc.)
+    : "—";
   const vocabValue = resolveConfigNumber(modelDetails?.config, VOCAB_KEYS);
   const vocabSize =
-    vocabValue !== undefined ? vocabValue.toLocaleString() : "-";
+    vocabValue !== undefined ? vocabValue.toLocaleString() : "—";
 
   const description =
     modelDetails?.description || `${modelName} is a model from ${org}.`;
-
-  // Model tags list
   const tags: string[] = Array.isArray(modelDetails?.tags)
     ? modelDetails.tags
     : [];
 
-  // Header badges come from the selected task / model card, never hardcoded.
-  const badges = [
-    taskLabel,
-    modelType !== "base" ? modelType : undefined,
-  ].filter((b): b is string => !!b);
+  const specs: Array<[string, string]> = [
+    ["Parameters", String(paramsCount)],
+    ["Context", contextLength],
+    ["Layers", String(layers)],
+    ["Dtype", String(dtype)],
+    ["Est. VRAM", `~${Math.ceil(requiredVram || 16)} GB`],
+  ];
+
+  const meta: Array<[string, string]> = [
+    ["Architecture", String(architecture)],
+    ["Model type", String(modelType)],
+    ["License", String(license)],
+    ["Last updated", String(lastUpdated)],
+    ["Vocabulary", String(vocabSize)],
+    ["Framework", String(modelDetails?.library_name || "—")],
+  ];
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--dm-panel-alt)] p-6 shadow-sm">
-      {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--dm-logo)] p-2">
-            <Logo name={org} size={26} />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-[var(--text-main)]">
-                {modelName}
-              </h3>
-              <div className="flex items-center gap-1.5">
-                {badges.map((badge) => (
-                  <span
-                    key={badge}
-                    className="rounded bg-[var(--dm-chip)] px-2 py-0.5 text-[11px] font-medium text-[var(--dm-text-3)] capitalize"
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
+    <div className="grid gap-4">
+      {/* Description + external links */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-mut2">
+          {description}
+        </p>
+        <a
+          href={`https://huggingface.co/${modelId}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex flex-none items-center gap-1.5 text-[12.5px] font-medium text-accent-t transition hover:brightness-110"
+        >
+          View on Hugging Face
+          <ExternalLink className="size-3.5" strokeWidth={1.7} />
+        </a>
+      </div>
+
+      {/* Quick specs strip */}
+      <div className="grid grid-cols-2 gap-4 rounded-xl border border-line bg-card p-4 sm:grid-cols-5">
+        {specs.map(([label, value]) => (
+          <div key={label}>
+            <div className="truncate text-sm font-semibold capitalize" title={value}>
+              {value}
             </div>
-            <div className="text-xs text-[var(--text-light)] font-mono mt-0.5">
-              {modelId}
-            </div>
+            <div className="mt-0.5 text-[11px] text-mut">{label}</div>
           </div>
-        </div>
-
-        {/* Action Links */}
-        <div className="flex items-center gap-4 text-xs">
-          <a
-            href={`https://huggingface.co/${modelId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <span>View on Hugging Face</span>
-            <ExternalLink className="size-3" />
-          </a>
-          <a
-            href={`https://huggingface.co/${modelId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <span>Model Card</span>
-            <ExternalLink className="size-3" />
-          </a>
-        </div>
+        ))}
       </div>
 
-      {/* Description */}
-      <p className="mt-3.5 text-xs leading-relaxed text-[var(--text-muted)]">
-        {description}
-      </p>
-
-      {/* Quick Specs Row */}
-      <div className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-[var(--dm-divider)] bg-[var(--dm-strip)] p-4 sm:grid-cols-5">
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-main)]">
-            {paramsCount}
+      {/* Metadata */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-[12.5px] sm:grid-cols-2 lg:grid-cols-3">
+        {meta.map(([label, value]) => (
+          <div
+            key={label}
+            className="flex min-w-0 items-center justify-between gap-3 border-b border-line pb-2"
+          >
+            <span className="shrink-0 text-mut">{label}</span>
+            <span className="min-w-0 truncate font-medium text-mut2" title={value}>
+              {value}
+            </span>
           </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            Parameters
-          </div>
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-main)]">
-            {contextLength}
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            Context Length
-          </div>
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-main)]">
-            {layers}
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            Layers
-          </div>
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-main)] capitalize">
-            {dtype}
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            Dtype
-          </div>
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-main)]">
-            ~{Math.ceil(requiredVram || 16)} GB
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-light)]">
-            Est. VRAM
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Metadata Key-Values Grid */}
-      <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-2.5 text-xs sm:grid-cols-2 lg:grid-cols-3 pt-5">
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">Architecture</span>
-          <span
-            title={String(architecture)}
-            className="min-w-0 truncate font-mono text-[var(--dm-text-3)]"
-          >
-            {architecture}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">Model Type</span>
-          <span
-            title={String(modelType)}
-            className="min-w-0 truncate text-[var(--dm-text-3)]"
-          >
-            {modelType}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">License</span>
-          <span
-            title={String(license)}
-            className="min-w-0 truncate text-[var(--dm-text-3)]"
-          >
-            {license}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">
-            Last Updated
-          </span>
-          <span
-            title={String(lastUpdated)}
-            className="min-w-0 truncate text-[var(--dm-text-3)]"
-          >
-            {lastUpdated}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">
-            Vocabulary Size
-          </span>
-          <span
-            title={String(vocabSize)}
-            className="min-w-0 truncate text-[var(--dm-text-3)]"
-          >
-            {vocabSize}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-dashed border-[var(--dm-divider)] pb-2.5">
-          <span className="shrink-0 text-[var(--text-light)]">Framework</span>
-          <span
-            title={String(modelDetails?.library_name || "-")}
-            className="min-w-0 truncate text-[var(--dm-text-3)]"
-          >
-            {modelDetails?.library_name || "-"}
-          </span>
-        </div>
-      </div>
-
-      {/* Model Tags Section */}
+      {/* Tags */}
       {tags.length > 0 && (
-        <div className="mt-5 pt-4">
-          <div className="mb-2.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
-            <Tag className="size-3 text-[var(--text-light)]" />
-            <span>Tags</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.slice(0, 16).map((t) => (
-              <span
-                key={t}
-                className="rounded-md border border-[var(--border)] bg-[var(--dm-tag)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {tags.slice(0, 16).map((t) => (
+            <span key={t} className={K.pill}>
+              {t}
+            </span>
+          ))}
         </div>
       )}
 
-      {/* Gated Token input if gated */}
+      {/* Gated token */}
       {modelDetails?.gated && (
-        <div className="mt-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-400">
-            <KeyRound className="size-3.5" />
-            <span>Gated Model — Hugging Face Token Required</span>
+        <div className="rounded-xl border border-warn/25 bg-warn/10 p-3.5">
+          <div className="mb-2 flex items-center gap-2 text-[12.5px] font-semibold text-warn">
+            <KeyRound className="size-3.5" strokeWidth={1.7} />
+            Gated model — Hugging Face token required
           </div>
-          <input
+          <Input
             type="password"
-            placeholder="hf_..."
+            placeholder="hf_…"
             value={hfToken}
             onChange={(e) => onHfTokenChange(e.target.value)}
-            className="h-9 w-full rounded-md border border-amber-500/30 bg-[var(--dm-logo-solid)] px-3 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] focus:border-amber-400 focus:outline-none"
+            className="font-mono text-[13px]"
           />
         </div>
       )}

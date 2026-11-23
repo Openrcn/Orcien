@@ -166,15 +166,15 @@ export function JsonArrayInput({
             if (field.autoGenerate) return null;
             return (
               <div key={field.key} className="space-y-1 w-full min-w-0">
-                <label className="text-[10px] font-medium text-[var(--dm-text-3)]">
-                  {field.label} {field.required && <span className="text-red-400">*</span>}
+                <label className="text-[11px] font-medium text-mut2">
+                  {field.label} {field.required && <span className="text-bad">*</span>}
                 </label>
                 <Input
                   type={field.type || "text"}
                   placeholder={field.placeholder || field.key}
                   value={item[field.key] ?? ""}
                   onChange={(e) => updateItem(index, field.key, e.target.value)}
-                  className="h-8 text-xs w-full min-w-0"
+                  className="h-9 w-full min-w-0 rounded-[10px] text-[13px]"
                 />
               </div>
             );
@@ -184,13 +184,13 @@ export function JsonArrayInput({
     } else {
       return (
         <div className="flex-1 space-y-1 w-full min-w-0">
-          <label className="text-[10px] font-medium text-[var(--dm-text-3)]">Value</label>
+          <label className="text-[11px] font-medium text-mut2">Value</label>
           <Input
             type={schema.type === "number" ? "number" : schema.type === "boolean" ? "checkbox" : "text"}
             placeholder="Enter value"
             value={item.value ?? ""}
             onChange={(e) => updateItem(index, "value", schema.type === "number" ? Number(e.target.value) : schema.type === "boolean" ? e.target.checked : e.target.value)}
-            className="h-8 text-xs w-full min-w-0"
+            className="h-9 w-full min-w-0 rounded-[10px] text-[13px]"
           />
         </div>
       );
@@ -199,12 +199,12 @@ export function JsonArrayInput({
 
   return (
     <div className="space-y-3 w-full min-w-0">
-      {description && <p className="text-[10px] text-[var(--text-light)]">{description}</p>}
+      {description && <p className="text-xs text-mut">{description}</p>}
       {items.length === 0 ? (
-        <div className="w-full text-center py-8 border-2 border-dashed border-[var(--dm-card-border)] rounded-lg min-w-0">
-          <p className="text-xs text-[var(--text-muted)]">{emptyMessage}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={addItem}>
-            <Plus className="mr-1.5 size-3.5" /> {addButtonLabel}
+        <div className="w-full min-w-0 rounded-xl border border-dashed border-line2 py-8 text-center">
+          <p className="text-[13px] text-mut">{emptyMessage}</p>
+          <Button variant="secondary" size="sm" className="mt-3" onClick={addItem}>
+            <Plus className="size-3.5" strokeWidth={1.7} /> {addButtonLabel}
           </Button>
         </div>
       ) : (
@@ -212,26 +212,26 @@ export function JsonArrayInput({
           {items.map((item, index) => (
             <div
               key={index}
-              className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg border border-[var(--dm-card-border)] bg-[var(--dm-inset)] w-full min-w-0"
+              className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-line bg-band p-3 sm:flex-row"
             >
-              <div className="flex items-center gap-2 text-[var(--text-muted)] shrink-0 pt-1">
-                <GripVertical className="size-4 cursor-grab" />
-                <span className="text-xs font-mono">{index + 1}</span>
+              <div className="flex shrink-0 items-center gap-2 pt-1 text-mut">
+                <GripVertical className="size-4 cursor-grab" strokeWidth={1.7} />
+                <span className="font-mono text-xs">{index + 1}</span>
               </div>
               {renderItemInput(item, index)}
               <Button
                 variant="ghost"
                 size="sm"
-                className="self-start mt-6 sm:mt-0 text-red-400 hover:bg-red-500/10 shrink-0"
+                className="mt-6 shrink-0 self-start text-bad hover:bg-bad/10 hover:text-bad sm:mt-0"
                 onClick={() => removeItem(index)}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-3.5" strokeWidth={1.7} />
               </Button>
             </div>
           ))}
           <div className="w-full min-w-0">
-            <Button variant="outline" size="sm" className="w-full" onClick={addItem}>
-              <Plus className="mr-1.5 size-3.5" /> {addButtonLabel}
+            <Button variant="secondary" size="sm" className="w-full" onClick={addItem}>
+              <Plus className="size-3.5" strokeWidth={1.7} /> {addButtonLabel}
             </Button>
           </div>
         </div>

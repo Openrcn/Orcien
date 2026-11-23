@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Box, ChevronRight, Info, Loader2 } from "lucide-react";
 import { Logo } from "@/components/ui/Logos";
+import { Button } from "@/components/ui/Button";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "cn";
+import { K } from "@/components/providers/kit";
 import { ComputeInstance } from "@/components/create/instance-utils";
 import { ModelDetails } from "./model-types";
 import {
@@ -28,8 +31,9 @@ interface DeploySummaryProps {
     runtime: string;
     replicas: number;
     provider: string;
+    provider_connection_name?: string;
     instance: ComputeInstance | null;
-    timeoutMinutes?: number;
+    timeout_minutes?: number;
     strategy?: string;
   };
   modelDetails: ModelDetails | null;
@@ -42,6 +46,7 @@ interface DeploySummaryProps {
   canNext: boolean;
 }
 
+/* Right rail — original structure, kit tokens only */
 export function DeploySummary({
   data,
   modelDetails,
@@ -69,14 +74,9 @@ export function DeploySummary({
         : "-";
 
   // Context (falls back to text_config etc. for multimodal models)
-  const contextValue = resolveConfigNumber(
-    modelDetails?.config,
-    CONTEXT_KEYS,
-  );
+  const contextValue = resolveConfigNumber(modelDetails?.config, CONTEXT_KEYS);
   const contextLength =
-    contextValue !== undefined
-      ? `${Math.round(contextValue / 1024)}K`
-      : "-";
+    contextValue !== undefined ? `${Math.round(contextValue / 1024)}K` : "-";
 
   // Dtype (falls back to text_config etc. for multimodal models)
   const dtype =
@@ -92,280 +92,265 @@ export function DeploySummary({
   // Button label
   const getButtonText = () => {
     if (currentStep === 1) return "Continue to Compute";
-    if (currentStep === 2) return "Continue to Configuration";
-    return "Deploy Model";
+    if (currentStep === 2) return "Continue to Engine";
+    if (currentStep === 3) return "Continue to Deployment";
+    return "Continue to Review";
   };
 
-  const isFinalStep = currentStep === 3;
+  const isFinalStep = currentStep === 5;
 
   return (
-    <aside className="sticky top-6 flex flex-col rounded-xl border border-[var(--border)] bg-[var(--dm-panel)] p-5 shadow-sm">
+    <aside className="sticky top-6 rounded-2xl border border-line bg-band p-1.5 [box-shadow:var(--sh)]">
       {/* Header */}
-      <div>
-        <h3 className="text-sm font-semibold text-[var(--text-main)]">
+      <div className="px-3 pb-2.5 pt-2">
+        <h3 className="text-[15px] font-semibold tracking-[-.01em]">
           Deployment Summary
         </h3>
-        <p className="mt-0.5 text-xs text-[var(--text-light)]">
+        <p className="mt-0.5 text-[12px] text-mut">
           Configure your model, compute and deployment settings.
         </p>
       </div>
 
-      <div className="mt-5 space-y-5">
-        {/* Model Section */}
-        <div className="border-t border-[var(--dm-divider)] pt-4">
-          <div className="mb-2.5 text-xs font-medium text-[var(--text-muted)]">
-            Model
+      <div className={K.inner}>
+        <div className="divide-y divide-line">
+          {/* Model Section */}
+          <div className="p-4">
+            <div className="mb-2.5 text-[12px] font-medium text-mut2">
+              Model
+            </div>
+
+            {modelId ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-line bg-card p-1.5">
+                    <Logo name={modelOrg} size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="truncate text-[13px] font-medium text-fg"
+                      title={modelName}
+                    >
+                      {modelName}
+                    </div>
+                    <div
+                      className="truncate font-mono text-[10px] text-mut"
+                      title={modelId}
+                    >
+                      {modelId}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges */}
+                {(taskLabel || data.runtime) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {taskLabel && <span className={K.pill}>{taskLabel}</span>}
+                    {data.runtime && (
+                      <span className={K.pill}>{data.runtime}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Rows */}
+                <div className="space-y-2 pt-1 text-[12.5px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-mut">Parameters</span>
+                    <span className="font-medium text-fg">{paramsCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-mut">Context Length</span>
+                    <span className="font-medium text-fg">{contextLength}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-mut">Dtype</span>
+                    <span className="font-medium capitalize text-fg">
+                      {dtype}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-mut">Est. VRAM</span>
+                    <span className="font-medium text-fg">{estVram}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[12.5px] text-mut">No model selected</div>
+            )}
           </div>
 
-          {modelId ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-card)] p-1.5">
-                  <Logo name={modelOrg} size={18} />
+          {/* Compute Section */}
+          <div className="p-4">
+            <div className="mb-2.5 text-[12px] font-medium text-mut2">
+              Compute
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-line bg-card p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-line bg-band text-mut">
+                  <Box className="size-4 text-mut2" strokeWidth={1.7} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div
-                    className="truncate text-xs font-semibold text-[var(--text-main)]"
-                    title={modelName}
-                  >
-                    {modelName}
+                <div className="min-w-0">
+                  <div className="truncate text-[12.5px] font-medium text-fg">
+                    {data.instance ? data.instance.name : "Not selected"}
                   </div>
-                  <div
-                    className="truncate font-mono text-[10px] text-[var(--text-light)]"
-                    title={modelId}
-                  >
-                    {modelId}
+                  <div className="truncate text-[10px] text-mut">
+                    {data.provider
+                      ? data.provider.charAt(0).toUpperCase() +
+                        data.provider.slice(1)
+                      : "-"}
+                    {data.instance?.vram_gb &&
+                      ` • ${data.instance.vram_gb} GB VRAM`}
+                    {data.provider_connection_name &&
+                      ` • ${data.provider_connection_name}`}
                   </div>
                 </div>
               </div>
+              <ChevronRight
+                className="size-4 shrink-0 text-mut2"
+                strokeWidth={1.7}
+              />
+            </div>
+          </div>
 
-              {/* Badges */}
-              {(taskLabel || data.runtime) && (
-                <div className="flex flex-wrap gap-1.5">
-                  {taskLabel && (
-                    <span className="rounded bg-[var(--dm-card)] px-2 py-0.5 text-[10px] font-medium text-[var(--dm-text-3)] border border-[var(--dm-divider)]">
-                      {taskLabel}
-                    </span>
-                  )}
-                  {data.runtime && (
-                    <span className="rounded bg-[var(--dm-card)] px-2 py-0.5 text-[10px] font-medium text-[var(--dm-text-3)] border border-[var(--dm-divider)]">
-                      {data.runtime}
-                    </span>
-                  )}
-                </div>
+          {/* Deployment Section */}
+          <div className="p-4">
+            <div className="mb-2.5 text-[12px] font-medium text-mut2">
+              Deployment
+            </div>
+            <div className="space-y-2 text-[12.5px]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-mut">Name</span>
+                <span className="truncate font-medium text-fg">
+                  {data.name || "-"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-mut">Replicas</span>
+                <span className="font-medium text-fg">
+                  {data.replicas || 1}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-mut">Recovery Strategy</span>
+                <span className="font-medium text-fg">
+                  {data.strategy || "EXTEND"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-mut">Estimated Cost</span>
+                <span className="font-medium text-fg">
+                  {data.instance ? `$${data.instance.price}/h` : "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Endpoint Section */}
+          <div className="p-4">
+            <div className="mb-1 text-[12px] font-medium text-mut2">
+              Endpoint
+            </div>
+            <div className="mb-2.5 flex items-center gap-1 text-[11px] text-mut">
+              <span>Generated after deployment</span>
+              <Info className="size-3 text-mut" strokeWidth={1.7} />
+            </div>
+            <div className="flex h-9 items-center rounded-xl border border-line bg-card px-3 font-mono text-[11.5px] text-mut">
+              {data.name ? `${data.name}.orcn.network` : "-"}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="border-t border-line p-3.5">
+          {isFinalStep ? (
+            <Button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              disabled={isDeploying || !canNext}
+              className="w-full"
+            >
+              {isDeploying ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" strokeWidth={1.7} />
+                  <span>Deploying...</span>
+                </>
+              ) : (
+                <span>Deploy AI Model</span>
               )}
-
-              {/* Rows */}
-              <div className="space-y-2 pt-1 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-light)]">Parameters</span>
-                  <span className="font-medium text-[var(--dm-text-2)]">
-                    {paramsCount}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-light)]">
-                    Context Length
-                  </span>
-                  <span className="font-medium text-[var(--dm-text-2)]">
-                    {contextLength}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-light)]">Dtype</span>
-                  <span className="font-medium capitalize text-[var(--dm-text-2)]">
-                    {dtype}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-light)]">Est. VRAM</span>
-                  <span className="font-medium text-[var(--dm-text-2)]">
-                    {estVram}
-                  </span>
-                </div>
-              </div>
-            </div>
+            </Button>
           ) : (
-            <div className="text-xs text-[var(--text-light)]">
-              No model selected
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onNext}
+              disabled={!canNext}
+              className="w-full"
+            >
+              {getButtonText()}
+            </Button>
           )}
         </div>
-
-        {/* Compute Section */}
-        <div className="border-t border-[var(--dm-divider)] pt-4">
-          <div className="mb-2.5 text-xs font-medium text-[var(--text-muted)]">
-            Compute
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--dm-card)] p-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-inset)] text-[var(--text-muted)]">
-                <Box className="size-4 text-[var(--dm-text-3)]" />
-              </div>
-              <div>
-                <div className="text-xs font-medium text-[var(--dm-text-2)]">
-                  {data.instance ? data.instance.name : "Not selected"}
-                </div>
-                <div className="text-[10px] text-[var(--text-light)]">
-                  {data.provider
-                    ? data.provider.charAt(0).toUpperCase() +
-                      data.provider.slice(1)
-                    : "-"}
-                  {data.instance?.vram_gb &&
-                    ` • ${data.instance.vram_gb} GB VRAM`}
-                </div>
-              </div>
-            </div>
-            <ChevronRight className="size-4 text-zinc-600" />
-          </div>
-        </div>
-
-        {/* Deployment Section */}
-        <div className="border-t border-[var(--dm-divider)] pt-4">
-          <div className="mb-2.5 text-xs font-medium text-[var(--text-muted)]">
-            Deployment
-          </div>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Name</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
-                {data.name || "-"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Replicas</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
-                {data.replicas || 1}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">
-                Recovery Strategy
-              </span>
-              <span className="font-medium text-[var(--dm-text-2)]">
-                {data.strategy || "EXTEND"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Estimated Cost</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
-                {data.instance ? `$${data.instance.price}/h` : "-"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Endpoint Section */}
-        <div className="border-t border-[var(--dm-divider)] pt-4">
-          <div className="mb-1 text-xs font-medium text-[var(--text-muted)]">
-            Endpoint
-          </div>
-          <div className="mb-2.5 flex items-center gap-1 text-[11px] text-[var(--text-light)]">
-            <span>Generated after deployment</span>
-            <Info className="size-3 text-[var(--text-light)]" />
-          </div>
-          <div className="h-9 rounded-lg border border-[var(--border)] bg-[var(--dm-card)] px-3 flex items-center text-xs text-[var(--text-light)] font-mono">
-            {data.name ? `${data.name}.orcn.network` : "-"}
-          </div>
-        </div>
-      </div>
-
-      {/* Action Button */}
-      <div className="mt-6 border-t border-[var(--dm-divider)] pt-4">
-        {isFinalStep ? (
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            disabled={isDeploying || !canNext}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {isDeploying ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                <span>Deploying...</span>
-              </>
-            ) : (
-              <span>Deploy AI Model</span>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!canNext}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--dm-btn-2)] text-xs font-semibold text-[var(--dm-text-2)] transition hover:bg-[var(--dm-btn-2-hover)] hover:text-[var(--dm-btn-2-text-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {getButtonText()}
-          </button>
-        )}
       </div>
 
       {/* Launch Confirmation */}
-      <Dialog
-        open={confirmOpen}
-        onOpenChange={(open: boolean) => setConfirmOpen(open)}
-      >
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={confirmOpen} onOpenChange={(open: boolean) => setConfirmOpen(open)}>
+        <DialogContent className="rounded-2xl border border-line2 bg-card p-5 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Launch deployment?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-[17px]">Launch deployment?</DialogTitle>
+            <DialogDescription className="text-[13px] text-mut2">
               Nodes will be provisioned on the provider network and your
               endpoint allocated. Billing starts as soon as the instance is up.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Model</span>
-              <span className="max-w-[220px] truncate font-medium text-[var(--dm-text-2)]">
+          <div className="overflow-hidden rounded-xl border border-line bg-band">
+            <div className={cn(K.kv, "text-[12.5px]")}>
+              <span className="flex-1 text-mut">Model</span>
+              <span className="max-w-[220px] truncate font-medium text-fg">
                 {data.model || "-"}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Compute</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
+            <div className={cn(K.kv, "text-[12.5px]")}>
+              <span className="flex-1 text-mut">Compute</span>
+              <span className="font-medium text-fg">
                 {data.instance ? data.instance.name : "-"}
                 {data.instance?.vram_gb ? ` • ${data.instance.vram_gb} GB` : ""}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Replicas</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
-                {data.replicas || 1}
-              </span>
+            <div className={cn(K.kv, "text-[12.5px]")}>
+              <span className="flex-1 text-mut">Replicas</span>
+              <span className="font-medium text-fg">{data.replicas || 1}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-light)]">Est. Cost</span>
-              <span className="font-medium text-[var(--dm-text-2)]">
+            <div className={cn(K.kv, "text-[12.5px]")}>
+              <span className="flex-1 text-mut">Est. Cost</span>
+              <span className="font-medium text-fg">
                 {data.instance ? `$${data.instance.price}/h` : "-"}
               </span>
             </div>
           </div>
-          <DialogFooter>
-            <button
+          <DialogFooter className="border-line bg-transparent">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setConfirmOpen(false)}
-              className="flex h-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-btn-2)] px-4 text-xs font-semibold text-[var(--dm-text-2)] transition hover:bg-[var(--dm-btn-2-hover)] hover:text-[var(--dm-btn-2-text-hover)]"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 setConfirmOpen(false);
                 onDeploy();
               }}
               disabled={isDeploying || !canNext}
-              className="flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isDeploying ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" strokeWidth={1.7} />
                   <span>Launching...</span>
                 </>
               ) : (
                 <span>Launch now</span>
               )}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

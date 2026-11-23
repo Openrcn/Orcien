@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, Upload } from "lucide-react";
+import { cn } from "cn";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -19,9 +21,6 @@ interface Props {
   onFileChange: (key: string, file: File | null) => void;
 }
 
-const inputClass =
-  "h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--dm-inset)] px-3 text-xs text-[var(--text-main)] placeholder:text-[var(--text-light)] transition-colors focus:border-blue-500 focus:outline-none";
-
 export function ProviderFieldInput({
   field,
   value,
@@ -36,23 +35,26 @@ export function ProviderFieldInput({
     return (
       <button
         type="button"
+        role="switch"
+        aria-checked={checked}
         onClick={() => onChange(field.key, !checked)}
-        className="flex items-center gap-2.5"
+        className="flex h-11 items-center gap-2.5"
       >
+        {/* Kit toggle */}
         <span
-          className={`relative h-5 w-9 rounded-full border transition-colors ${
-            checked
-              ? "border-blue-500 bg-blue-500/80"
-              : "border-[var(--dm-chip-border)] bg-[var(--dm-inset)]"
-          }`}
+          className={cn(
+            "relative h-[22px] w-9 flex-none rounded-full shadow-inner transition",
+            checked ? "bg-accent" : "bg-line2",
+          )}
         >
           <span
-            className={`absolute top-0.5 size-3.5 rounded-full bg-white transition-all ${
-              checked ? "left-4.5" : "left-0.5"
-            }`}
+            className={cn(
+              "absolute left-[3px] top-[3px] size-4 rounded-full shadow transition",
+              checked ? "translate-x-[14px] bg-on-accent" : "bg-white",
+            )}
           />
         </span>
-        <span className="text-xs text-[var(--text-muted)]">
+        <span className="text-[13px] text-mut2">
           {checked ? "Enabled" : "Disabled"}
         </span>
       </button>
@@ -65,10 +67,10 @@ export function ProviderFieldInput({
         value={value ?? field.default ?? ""}
         onValueChange={(val: string) => val && onChange(field.key, val)}
       >
-        <SelectTrigger className="h-9 w-full border-[var(--border)] bg-[var(--dm-inset)] text-xs text-[var(--dm-text-2)]">
+        <SelectTrigger className="w-full text-[13.5px] data-[size=default]:h-11">
           <SelectValue placeholder={field.placeholder || "Select an option"} />
         </SelectTrigger>
-        <SelectContent className="border-[var(--border)] bg-[var(--dm-select-content)] text-[var(--dm-text-2)]">
+        <SelectContent>
           {field.options.map((opt) => (
             <SelectItem key={opt} value={opt}>
               {opt}
@@ -81,8 +83,8 @@ export function ProviderFieldInput({
 
   if (field.type === "file") {
     return (
-      <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--dm-chip-border)] bg-[var(--dm-inset)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)]">
-        <Upload className="size-3.5 shrink-0" />
+      <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-line2 bg-field px-3.5 text-[13px] text-mut2 transition hover:border-accent hover:text-fg">
+        <Upload className="size-4 shrink-0" strokeWidth={1.7} />
         <span className="truncate">{file ? file.name : "Choose file"}</span>
         <input
           type="file"
@@ -97,7 +99,7 @@ export function ProviderFieldInput({
 
   return (
     <div className="relative">
-      <input
+      <Input
         type={
           isPassword && !showSecret
             ? "password"
@@ -108,18 +110,23 @@ export function ProviderFieldInput({
         placeholder={field.placeholder || field.default || ""}
         value={String(value ?? field.default ?? "")}
         onChange={(e) => onChange(field.key, e.target.value)}
-        className={`${inputClass} ${isPassword ? "pr-9" : ""}`}
+        autoComplete="off"
+        className={cn(
+          (isPassword || field.secret) && "font-mono text-[13px]",
+          isPassword && "pr-10",
+        )}
       />
       {isPassword && (
         <button
           type="button"
           onClick={() => setShowSecret((s) => !s)}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-light)] transition-colors hover:text-[var(--text-main)]"
+          aria-label={showSecret ? "Hide secret" : "Show secret"}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-mut transition hover:text-fg"
         >
           {showSecret ? (
-            <EyeOff className="size-3.5" />
+            <EyeOff className="size-4" strokeWidth={1.7} />
           ) : (
-            <Eye className="size-3.5" />
+            <Eye className="size-4" strokeWidth={1.7} />
           )}
         </button>
       )}

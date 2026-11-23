@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const gatewayOrigin = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:27100"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   async redirects() {
     // Config-level redirects avoid calling redirect() during React render,
@@ -17,7 +21,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://127.0.0.1:8080/api/v1/:path*", // Proxy to Go Gateway via IPv4
+        destination: `${gatewayOrigin}/api/v1/:path*`, // Proxy to Go Gateway via IPv4
       },
     ];
   },

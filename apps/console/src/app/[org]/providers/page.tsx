@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Plus, RefreshCw, Trash2, Cpu, Server } from "lucide-react";
+import {
+  ChevronDown,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Server,
+  Trash2,
+} from "lucide-react";
+import { cn } from "cn";
 import { Logo } from "@/components/ui/Logos";
 import { Button } from "@/components/ui/Button";
 import { useOrgHref } from "@/lib/org";
+import { K, AsideCard, StatusPill } from "@/components/providers/kit";
 import {
   deleteConnection,
   fetchConnections,
@@ -20,22 +29,61 @@ export default function ProvidersPage() {
   const router = useRouter();
   const orgHref = useOrgHref();
   const [connections, setConnections] = useState<ProviderConnection[]>([]);
-  const [providers, setProviders] = useState<Record<string, ProviderCapability>>(
-    {},
-  );
+  const [providers, setProviders] = useState<ProviderCapability[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     Promise.all([fetchConnections(), fetchProviders()])
       .then(([conns, list]) => {
         setConnections(conns);
-        setProviders(Object.fromEntries(list.map((p) => [p.id, p])));
+        setProviders(list);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Group connections under their provider; keep providers with no accounts too.
+  const groups = useMemo(() => {
+    const byProvider = new Map<string, ProviderConnection[]>();
+    connections.forEach((c) => {
+      const list = byProvider.get(c.Provider) ?? [];
+      list.push(c);
+      byProvider.set(c.Provider, list);
+    });
+    const known = providers.map((p) => ({
+      id: p.id,
+      name: p.name || providerLabel(p.id),
+      features: p.features ?? [],
+      accounts: byProvider.get(p.id) ?? [],
+    }));
+    const knownIds = new Set(providers.map((p) => p.id));
+    const extras = [...byProvider.entries()]
+      .filter(([id]) => !knownIds.has(id))
+      .map(([id, accounts]) => ({
+        id,
+        name: providerLabel(id),
+        features: [],
+        accounts,
+      }));
+    return [...known, ...extras];
+  }, [providers, connections]);
+
+  const failing = useMemo(
+    () => connections.filter((c) => c.Status !== "verified"),
+    [connections],
+  );
+
+  const goConnect = (providerId?: string) =>
+    router.push(
+      orgHref(
+        providerId
+          ? `/providers/new?provider=${encodeURIComponent(providerId)}`
+          : "/providers/new",
+      ),
+    );
 
   async function handleReverify(id: string) {
     setBusyId(id);
@@ -71,140 +119,260 @@ export default function ProvidersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-[1360px]">
+      {/* Page header */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-main)]">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-.03em]">
             Providers
           </h1>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Connect cloud and compute providers to deploy workloads on ORCN.
+          <p className="mt-1.5 text-[13.5px] text-mut2">
+            Connect cloud and compute providers to deploy workloads on Orcien.
           </p>
         </div>
-        <Button size="sm" onClick={() => router.push(orgHref("/providers/new"))}>
-          <Plus className="mr-1.5 size-3.5" /> Add Provider
+        <Button size="sm" className="ml-auto" onClick={() => goConnect()}>
+          <Plus className="size-4" strokeWidth={1.7} />
+          Connect account
         </Button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="mb-4 rounded-xl border border-bad/30 bg-bad/10 px-3.5 py-2.5 text-[13px] text-bad">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-16 text-xs text-[var(--text-muted)]">
-          <Loader2 className="size-4 animate-spin" />
+        <div className="flex items-center gap-2.5 py-16 text-[13px] text-mut">
+          <span className="size-4 animate-spin rounded-full border-2 border-line2 border-t-accent" />
           Loading connections…
         </div>
-      ) : connections.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--dm-card-border)] bg-[var(--card-bg)] py-16 text-center">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--dm-inset)]">
-            <Plus className="size-5 text-[var(--text-muted)]" />
-          </div>
-          <p className="mt-3 text-sm font-medium text-[var(--text-main)]">
-            No provider connections yet
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+      ) : groups.length === 0 ? (
+        <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed border-line2 px-5 py-10 text-center">
+          <b>No providers available</b>
+          <span className="text-mut">
             Connect a provider to start deploying.
-          </p>
-          <Button
-            size="sm"
-            className="mt-4"
-            onClick={() => router.push(orgHref("/providers/new"))}
-          >
-            Add Provider
+          </span>
+          <Button size="sm" className="mt-1" onClick={() => goConnect()}>
+            <Plus className="size-4" strokeWidth={1.7} />
+            Connect account
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {connections.map((c) => {
-            const providerName =
-              providers[c.Provider]?.name || providerLabel(c.Provider);
-            const verified = c.Status === "verified";
-            return (
-              <div
-                key={c.ID}
-                className="flex flex-col rounded-xl border border-[var(--dm-card-border)] bg-[var(--card-bg)] p-4"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--dm-inset)] p-2">
-                    <Logo name={c.Provider} size={24} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-[var(--text-main)]">
-                      {c.Name}
-                    </div>
-                    <div className="truncate text-[11px] text-[var(--text-muted)]">
-                      {providerName}
-                    </div>
-                  </div>
-                  <span
-                    className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                      verified
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                        : "border-red-500/30 bg-red-500/10 text-red-400"
-                    }`}
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          {/* Provider groups */}
+          <div>
+            {groups.map((g) => {
+              const n = g.accounts.length;
+              const isClosed = closed[g.id];
+              return (
+                <section
+                  key={g.id}
+                  className={cn("mb-4", K.dbx, (isClosed || !n) && "pb-0")}
+                >
+                  {/* Group header (click to fold) */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      setClosed((s) => ({ ...s, [g.id]: !s[g.id] }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setClosed((s) => ({ ...s, [g.id]: !s[g.id] }));
+                      }
+                    }}
+                    className="flex cursor-pointer select-none flex-wrap items-center gap-2.5 px-3 pb-2.5 pt-3"
                   >
+                    <span className="grid size-[30px] flex-none place-items-center rounded-[9px] border border-line bg-card">
+                      <Logo name={g.id} size={16} />
+                    </span>
+                    <h3 className="text-[15px] font-semibold tracking-[-.01em]">
+                      {g.name}
+                    </h3>
+                    <span className="text-[13px] text-mut">
+                      {n
+                        ? `${n} ${n > 1 ? "accounts" : "account"}`
+                        : "Not connected"}
+                    </span>
+                    <span className="flex flex-wrap gap-1.5 max-sm:hidden">
+                      {g.features.slice(0, 3).map((feat) => (
+                        <span key={feat} className={K.pill}>
+                          {feat}
+                        </span>
+                      ))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goConnect(g.id);
+                      }}
+                      title={`Connect ${g.name}`}
+                      aria-label={`Connect ${g.name}`}
+                      className={cn(K.ib, "ml-auto")}
+                    >
+                      <Plus className="size-4" strokeWidth={1.7} />
+                    </button>
                     <span
-                      className={`size-1.5 rounded-full ${verified ? "bg-emerald-400" : "bg-red-400"}`}
-                    />
-                    {verified ? "Connected" : "Failed"}
-                  </span>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-[var(--dm-divider)] pt-3">
-                  <span className="text-[10px] text-[var(--text-light)]">
-                    Added {new Date(c.CreatedAt).toLocaleDateString()}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {c.Provider === "local" && (
-                      <button
-                        type="button"
-                        onClick={() => router.push(orgHref(`/providers/${c.ID}/machines`))}
-                        disabled={busyId === c.ID}
-                        title="Manage machines"
-                        className="flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-main)] disabled:opacity-50"
-                      >
-                        <Server className="size-3" />
-                        Machines
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => router.push(orgHref(`/providers/${c.ID}/edit`))}
-                      disabled={busyId === c.ID}
-                      title="Edit connection"
-                      className="flex items-center justify-center rounded-md border border-[var(--border)] p-1.5 text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-main)] disabled:opacity-50"
+                      className={cn(
+                        "text-mut transition",
+                        isClosed && "rotate-180",
+                      )}
                     >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleReverify(c.ID)}
-                      disabled={busyId === c.ID}
-                      title="Re-verify connection"
-                      className="flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-main)] disabled:opacity-50"
-                    >
-                      <RefreshCw
-                        className={`size-3 ${busyId === c.ID ? "animate-spin" : ""}`}
-                      />
-                      Verify
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(c.ID)}
-                      disabled={busyId === c.ID}
-                      title="Delete connection"
-                      className="flex items-center justify-center rounded-md border border-[var(--border)] p-1.5 text-[var(--text-muted)] transition-colors hover:border-red-500/40 hover:text-red-400 disabled:opacity-50"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      <ChevronDown className="size-4" strokeWidth={1.7} />
+                    </span>
                   </div>
+
+                  {/* Account rows */}
+                  {n > 0 && !isClosed && (
+                    <div className={K.inner}>
+                      {g.accounts.map((c) => {
+                        const verified = c.Status === "verified";
+                        const busy = busyId === c.ID;
+                        return (
+                          <div
+                            key={c.ID}
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2.5 transition last:border-0 hover:bg-fg/[.03] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_140px_128px]"
+                          >
+                            <b className="truncate text-[13.5px] font-medium">
+                              {c.Name}
+                            </b>
+                            <span className="col-span-2 truncate text-[12.5px] text-mut md:col-span-1 md:text-[13px] md:text-mut2">
+                              Added {new Date(c.CreatedAt).toLocaleDateString()}
+                            </span>
+                            <span>
+                              <StatusPill verified={verified} />
+                            </span>
+                            <span className="flex justify-end">
+                              {c.Provider === "local" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    router.push(
+                                      orgHref(`/providers/${c.ID}/machines`),
+                                    )
+                                  }
+                                  disabled={busy}
+                                  title="Manage machines"
+                                  aria-label="Manage machines"
+                                  className={K.ib}
+                                >
+                                  <Server className="size-[15px]" strokeWidth={1.7} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  router.push(orgHref(`/providers/${c.ID}/edit`))
+                                }
+                                disabled={busy}
+                                title="Edit connection"
+                                aria-label="Edit connection"
+                                className={K.ib}
+                              >
+                                <Pencil className="size-[15px]" strokeWidth={1.7} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReverify(c.ID)}
+                                disabled={busy}
+                                title="Test connection"
+                                aria-label="Test connection"
+                                className={K.ib}
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "size-[15px]",
+                                    busy && "animate-spin",
+                                  )}
+                                  strokeWidth={1.7}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(c.ID)}
+                                disabled={busy}
+                                title="Remove connection"
+                                aria-label="Remove connection"
+                                className={cn(
+                                  K.ib,
+                                  "hover:bg-bad/10 hover:text-bad",
+                                )}
+                              >
+                                <Trash2 className="size-[15px]" strokeWidth={1.7} />
+                              </button>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+
+          {/* Summary rail */}
+          <aside className="xl:sticky xl:top-[76px]">
+            <AsideCard title="Overview">
+              {[
+                [
+                  "Providers linked",
+                  `${groups.filter((g) => g.accounts.length).length} / ${groups.length}`,
+                ],
+                ["Accounts", String(connections.length)],
+                [
+                  "Connected",
+                  String(connections.length - failing.length),
+                ],
+                ["Needs attention", String(failing.length)],
+              ].map(([label, value]) => (
+                <div key={label} className={K.kv}>
+                  <span className="flex-1 text-mut2">{label}</span>
+                  <b className="font-medium">{value}</b>
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </AsideCard>
+
+            <AsideCard
+              title="Needs attention"
+              right={
+                <span className={failing.length ? K.warn : K.ok}>
+                  {failing.length ? failing.length : "All clear"}
+                </span>
+              }
+            >
+              {failing.length === 0 ? (
+                <div className={cn(K.kv, "text-mut2")}>
+                  Every account is healthy.
+                </div>
+              ) : (
+                failing.map((c) => (
+                  <div key={c.ID} className={K.kv}>
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate font-medium">{c.Name}</b>
+                      <small className="text-xs text-mut">
+                        {providers.find((p) => p.id === c.Provider)?.name ||
+                          providerLabel(c.Provider)}{" "}
+                        · re-check credentials
+                      </small>
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-3 text-xs"
+                      disabled={busyId === c.ID}
+                      onClick={() => handleReverify(c.ID)}
+                    >
+                      Retest
+                    </Button>
+                  </div>
+                ))
+              )}
+            </AsideCard>
+          </aside>
         </div>
       )}
     </div>

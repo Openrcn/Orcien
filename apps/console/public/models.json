@@ -1,0 +1,353 @@
+[
+  {
+    "displayName": "Llama 3.1 8B Instruct",
+    "familyName": "Llama 3.1",
+    "modelId": "meta-llama/Llama-3.1-8B-Instruct",
+    "description": "Meta's instruction-tuned chat model. Great all-rounder for chat, RAG and tool calling.",
+    "logo": "meta llama",
+    "provider": "Meta",
+    "category": "llm",
+    "parameters": 8,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["chat", "instruct", "tool-calling"],
+    "contextLength": "128K",
+    "minVramGb": 16,
+    "variantLabel": "8B",
+    "variants": [
+      {
+        "label": "8B",
+        "modelId": "meta-llama/Llama-3.1-8B-Instruct",
+        "parameters": 8,
+        "minVramGb": 16,
+        "contextLength": "128K"
+      },
+      {
+        "label": "70B",
+        "modelId": "meta-llama/Llama-3.1-70B-Instruct",
+        "parameters": 70,
+        "minVramGb": 160,
+        "contextLength": "128K"
+      }
+    ]
+  },
+  {
+    "displayName": "Qwen 2.5 7B Instruct",
+    "familyName": "Qwen 2.5",
+    "modelId": "Qwen/Qwen2.5-7B-Instruct",
+    "description": "Alibaba's fast multilingual instruct model. Strong reasoning at low VRAM cost.",
+    "logo": "qwen",
+    "provider": "Alibaba",
+    "category": "llm",
+    "parameters": 7,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["chat", "multilingual", "instruct"],
+    "contextLength": "128K",
+    "minVramGb": 16,
+    "variantLabel": "7B",
+    "variants": [
+      {
+        "label": "7B",
+        "modelId": "Qwen/Qwen2.5-7B-Instruct",
+        "parameters": 7,
+        "minVramGb": 16,
+        "contextLength": "128K"
+      },
+      {
+        "label": "14B",
+        "modelId": "Qwen/Qwen2.5-14B-Instruct",
+        "parameters": 14,
+        "minVramGb": 32,
+        "contextLength": "128K"
+      },
+      {
+        "label": "32B",
+        "modelId": "Qwen/Qwen2.5-32B-Instruct",
+        "parameters": 32,
+        "minVramGb": 70,
+        "contextLength": "128K"
+      }
+    ]
+  },
+  {
+    "displayName": "Mistral 7B Instruct v0.3",
+    "modelId": "mistralai/Mistral-7B-Instruct-v0.3",
+    "description": "Mistral's efficient instruct model. Snappy responses for chat and summarization.",
+    "logo": "mistral",
+    "provider": "Mistral",
+    "category": "llm",
+    "parameters": 7,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["chat", "instruct", "efficient"],
+    "contextLength": "32K",
+    "minVramGb": 16
+  },
+  {
+    "displayName": "DeepSeek R1 Distill 8B",
+    "familyName": "DeepSeek R1 Distill",
+    "modelId": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+    "description": "Distilled reasoning model. Exposes chain-of-thought for math and code tasks.",
+    "logo": "deepseek",
+    "provider": "DeepSeek",
+    "category": "llm",
+    "parameters": 8,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["reasoning", "r1", "code"],
+    "contextLength": "128K",
+    "minVramGb": 16,
+    "variantLabel": "8B",
+    "variants": [
+      {
+        "label": "8B",
+        "modelId": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+        "parameters": 8,
+        "minVramGb": 16,
+        "contextLength": "128K"
+      },
+      {
+        "label": "14B",
+        "modelId": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+        "parameters": 14,
+        "minVramGb": 32,
+        "contextLength": "128K"
+      },
+      {
+        "label": "32B",
+        "modelId": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+        "parameters": 32,
+        "minVramGb": 70,
+        "contextLength": "128K"
+      }
+    ]
+  },
+  {
+    "displayName": "Phi 4 Mini Instruct",
+    "modelId": "microsoft/Phi-4-mini-instruct",
+    "description": "Microsoft's compact instruct model. Ideal for lightweight chat on small GPUs.",
+    "logo": "microsoft",
+    "provider": "Microsoft",
+    "category": "llm",
+    "parameters": 3.8,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["chat", "compact", "instruct"],
+    "contextLength": "128K",
+    "minVramGb": 12
+  },
+  {
+    "displayName": "Qwen 3 14B AWQ",
+    "familyName": "Qwen 3",
+    "modelId": "Qwen/Qwen3-14B-AWQ",
+    "description": "Quantized 14B Qwen3 for higher quality. Needs more VRAM but tops benchmarks.",
+    "logo": "qwen",
+    "provider": "Alibaba",
+    "category": "llm",
+    "parameters": 14,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["chat", "awq", "quantized"],
+    "contextLength": "128K",
+    "minVramGb": 24,
+    "variantLabel": "14B",
+    "variants": [
+      {
+        "label": "8B",
+        "modelId": "Qwen/Qwen3-8B-AWQ",
+        "parameters": 8,
+        "minVramGb": 16,
+        "contextLength": "128K"
+      },
+      {
+        "label": "14B",
+        "modelId": "Qwen/Qwen3-14B-AWQ",
+        "parameters": 14,
+        "minVramGb": 24,
+        "contextLength": "128K"
+      },
+      {
+        "label": "32B",
+        "modelId": "Qwen/Qwen3-32B-AWQ",
+        "parameters": 32,
+        "minVramGb": 48,
+        "contextLength": "128K"
+      }
+    ]
+  },
+  {
+    "displayName": "Sarvam 30B",
+    "modelId": "sarvamai/sarvam-30b",
+    "description": "Compact Indic-languages model tuned for Hindi and regional language chat.",
+    "logo": "sarvam",
+    "provider": "Sarvam",
+    "category": "llm",
+    "parameters": 30,
+    "runtime": "vllm",
+    "modality": "text-generation",
+    "pipeline": "text-generation",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["indic", "hindi", "compact"],
+    "contextLength": "4K",
+    "minVramGb": 70
+  },
+  {
+    "displayName": "BGE Large Embeddings",
+    "familyName": "BGE Embeddings",
+    "modelId": "BAAI/bge-large-en-v1.5",
+    "description": "High-quality English embedding model for search, RAG and recommendations.",
+    "logo": "huggingface",
+    "provider": "BAAI",
+    "category": "embedding",
+    "parameters": 0.3,
+    "runtime": "vllm",
+    "modality": "embedding",
+    "pipeline": "sentence-similarity",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["embeddings", "retrieval", "rag"],
+    "contextLength": "512",
+    "minVramGb": 8,
+    "variantLabel": "Large",
+    "variants": [
+      {
+        "label": "Small",
+        "modelId": "BAAI/bge-small-en-v1.5",
+        "parameters": 0.03,
+        "minVramGb": 4,
+        "contextLength": "512"
+      },
+      {
+        "label": "Base",
+        "modelId": "BAAI/bge-base-en-v1.5",
+        "parameters": 0.1,
+        "minVramGb": 4,
+        "contextLength": "512"
+      },
+      {
+        "label": "Large",
+        "modelId": "BAAI/bge-large-en-v1.5",
+        "parameters": 0.3,
+        "minVramGb": 8,
+        "contextLength": "512"
+      }
+    ]
+  },
+  {
+    "displayName": "MiniLM Sentence Embeddings",
+    "modelId": "sentence-transformers/all-MiniLM-L6-v2",
+    "description": "Tiny, blazing-fast embeddings for prototyping semantic search and clustering.",
+    "logo": "huggingface",
+    "provider": "Sentence Transformers",
+    "category": "embedding",
+    "parameters": 0.02,
+    "runtime": "vllm",
+    "modality": "embedding",
+    "pipeline": "sentence-similarity",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["embeddings", "fast", "compact"],
+    "contextLength": "256",
+    "minVramGb": 4
+  },
+  {
+    "displayName": "BGE Reranker Large",
+    "modelId": "BAAI/bge-reranker-v2-m3",
+    "description": "Relevance scoring model to rerank retrieved passages before generation.",
+    "logo": "huggingface",
+    "provider": "BAAI",
+    "category": "reranker",
+    "parameters": 0.6,
+    "runtime": "vllm",
+    "modality": "score",
+    "pipeline": "text-classification",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["rerank", "scoring", "rag"],
+    "contextLength": "8K",
+    "minVramGb": 8
+  },
+  {
+    "displayName": "Qwen 2 VL 7B Instruct",
+    "familyName": "Qwen 2 VL",
+    "modelId": "Qwen/Qwen2-VL-7B-Instruct",
+    "description": "Vision-language model. Chat with images, documents and screenshots.",
+    "logo": "qwen",
+    "provider": "Alibaba",
+    "category": "vision",
+    "parameters": 7,
+    "runtime": "vllm",
+    "modality": "multimodal",
+    "pipeline": "image-text-to-text",
+    "image": "docker.io/vllm/vllm-openai:v0.26.0",
+    "tags": ["vision", "multimodal", "chat"],
+    "contextLength": "32K",
+    "minVramGb": 20,
+    "variantLabel": "7B",
+    "variants": [
+      {
+        "label": "2B",
+        "modelId": "Qwen/Qwen2-VL-2B-Instruct",
+        "parameters": 2,
+        "minVramGb": 8,
+        "contextLength": "32K"
+      },
+      {
+        "label": "7B",
+        "modelId": "Qwen/Qwen2-VL-7B-Instruct",
+        "parameters": 7,
+        "minVramGb": 20,
+        "contextLength": "32K"
+      },
+      {
+        "label": "72B",
+        "modelId": "Qwen/Qwen2-VL-72B-Instruct",
+        "parameters": 72,
+        "minVramGb": 160,
+        "contextLength": "32K"
+      }
+    ]
+  },
+  {
+    "displayName": "TeV 1 4B",
+    "modelId": "tev1:latest",
+    "description": "A 4B decision model from Together AI for fast classification.",
+    "logo": "together",
+    "provider": "Together AI",
+    "category": "decision",
+    "parameters": 4,
+    "runtime": "ollama",
+    "modality": "decision",
+    "pipeline": "decision",
+    "image": "ollama/ollama:latest",
+    "tags": ["decision", "classification", "thinking"],
+    "contextLength": "4K",
+    "minVramGb": 8
+  },
+  {
+    "displayName": "Nimble 9B",
+    "modelId": "nimble:latest",
+    "description": "A 9B decision model from Bespoke Labs for fast, typed classification.",
+    "logo": "bespoke",
+    "provider": "Bespoke Labs",
+    "category": "decision",
+    "parameters": 9,
+    "runtime": "ollama",
+    "modality": "decision",
+    "pipeline": "decision",
+    "image": "ollama/ollama:latest",
+    "tags": ["decision", "classification", "thinking"],
+    "contextLength": "4K",
+    "minVramGb": 12
+  }
+]

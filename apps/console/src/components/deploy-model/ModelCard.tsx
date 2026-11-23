@@ -1,7 +1,9 @@
 "use client";
 
-import { Download, Heart, Box, Check } from "lucide-react";
+import { Download, Heart } from "lucide-react";
+import { cn } from "cn";
 import { Logo } from "@/components/ui/Logos";
+import { K } from "@/components/providers/kit";
 
 export interface ModelItem {
   id: string;
@@ -28,6 +30,7 @@ function formatCount(n: number) {
   }).format(n);
 }
 
+/* Stacked table-like model row (kit) – matches the providers list row language */
 export function ModelCard({ model, selected, onClick }: ModelCardProps) {
   const {
     id,
@@ -38,82 +41,80 @@ export function ModelCard({ model, selected, onClick }: ModelCardProps) {
     vram,
     tags = [],
     pipelineTag,
+    parameters,
   } = model;
-  const displayTags = tags.length > 0 ? tags : pipelineTag ? [pipelineTag] : [];
+  const badge = pipelineTag || tags[0];
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={[
-        "group relative flex w-full flex-col justify-between rounded-xl border p-4 text-left transition-all duration-150",
-        selected
-          ? "border-blue-500/90 bg-[var(--dm-selected-2)] shadow-[0_0_15px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/50"
-          : "border-[var(--dm-card-border)] bg-[var(--dm-card-2)] hover:border-[var(--border-hover)] hover:bg-[var(--dm-card-hover-2)]",
-      ].join(" ")}
+      className={cn(
+        "relative grid w-full grid-cols-[16px_34px_minmax(0,1fr)_auto] items-center gap-x-3.5 px-4 py-2.5 text-left transition",
+        selected ? "bg-accent/[.05]" : "hover:bg-fg/[.03]",
+      )}
     >
-      {/* Top right selected check badge */}
       {selected && (
-        <span className="absolute right-3.5 top-3.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 shadow-sm">
-          <Check className="size-2.5 stroke-[3] text-white" />
-        </span>
+        <span className="absolute inset-y-0 left-0 w-[2px] bg-accent" />
       )}
 
-      {/* Top section: logo and model info */}
-      <div className="flex items-start gap-3.5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--dm-logo)] p-2">
-          <Logo name={org} size={22} />
-        </div>
-        <div className="min-w-0 flex-1 pr-5">
-          <div
-            className="truncate text-sm font-semibold text-[var(--text-main)]"
-            title={name}
-          >
-            {name}
-          </div>
-          <div
-            className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-light)]"
-            title={id}
-          >
-            {id}
-          </div>
+      {/* Radio */}
+      <span
+        className={cn(
+          "grid size-4 flex-none place-items-center rounded-full border",
+          selected ? "border-accent" : "border-line2",
+        )}
+      >
+        {selected && <span className="size-2 rounded-full bg-accent" />}
+      </span>
 
-          {/* Tags */}
-          <div className="mt-2.5 flex min-w-0 flex-wrap gap-1.5">
-            {displayTags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                title={tag}
-                className="max-w-full truncate rounded bg-[var(--dm-chip)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] capitalize"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Logo tile */}
+      <span className="grid size-[34px] flex-none place-items-center rounded-[10px] border border-line bg-card">
+        <Logo name={org} size={18} />
+      </span>
 
-      {/* Bottom stats row */}
-      <div className="mt-4 flex items-center gap-4 text-[11px] text-[var(--text-muted)]">
-        {downloads !== undefined && (
-          <div className="flex items-center gap-1">
-            <Download className="size-3 text-[var(--text-light)]" />
-            <span>{formatCount(downloads)}</span>
-          </div>
+      {/* Name + meta */}
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="truncate text-[14px] leading-snug" title={id}>
+            <span className="text-mut">{org}/</span>
+            <b className="font-medium text-fg">{name}</b>
+          </span>
+          {badge && (
+            <span className={cn(K.pill, "capitalize")}>{badge}</span>
+          )}
+        </span>
+        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-mut">
+          {parameters !== undefined && parameters > 0 && (
+            <span>{formatCount(parameters * 1e9)} params</span>
+          )}
+          {downloads !== undefined && (
+            <span className="inline-flex items-center gap-1">
+              <Download className="size-3" strokeWidth={1.7} />
+              {formatCount(downloads)}
+            </span>
+          )}
+          {likes !== undefined && (
+            <span className="inline-flex items-center gap-1">
+              <Heart className="size-3" strokeWidth={1.7} />
+              {formatCount(likes)}
+            </span>
+          )}
+        </span>
+      </span>
+
+      {/* VRAM need */}
+      <span className="text-right leading-tight">
+        {vram ? (
+          <>
+            <small className="block text-[11px] text-mut">needs</small>
+            <b className="text-[13px] font-medium text-fg">{vram}</b>
+            <small className="block text-[11px] text-mut">VRAM</small>
+          </>
+        ) : (
+          <small className="text-[11px] text-mut">—</small>
         )}
-        {likes !== undefined && (
-          <div className="flex items-center gap-1">
-            <Heart className="size-3 text-[var(--text-light)]" />
-            <span>{formatCount(likes)}</span>
-          </div>
-        )}
-        {vram && (
-          <div className="flex items-center gap-1">
-            <Box className="size-3 text-[var(--text-light)]" />
-            <span>{vram}</span>
-          </div>
-        )}
-      </div>
+      </span>
     </button>
   );
 }
