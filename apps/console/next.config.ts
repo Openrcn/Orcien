@@ -5,6 +5,7 @@ const gatewayOrigin = (
 ).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
   async redirects() {
     // Config-level redirects avoid calling redirect() during React render,
     // which triggers a Turbopack/React Performance.measure negative-timestamp
