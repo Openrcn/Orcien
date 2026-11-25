@@ -322,11 +322,12 @@ export function DeploymentsSidebar({
       {stats.kinds.length > 0 && (
         <AsideCard title="Workload mix">
           {stats.kinds.map(({ kind, count }) => {
-            const label = kind.toLowerCase().includes("container")
-              ? "Container"
-              : kind.toLowerCase().includes("model")
-                ? "Model inference"
-                : kind;
+            const label =
+              kind.toLowerCase().includes("workload") || kind.toLowerCase().includes("container")
+                ? "Workload"
+                : kind.toLowerCase().includes("model")
+                  ? "Model inference"
+                  : kind;
             const active = typeFilter === kind;
             const pct = stats.scopedTotal > 0 ? Math.round((count / stats.scopedTotal) * 100) : 0;
             return (

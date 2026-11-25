@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ConfigOption } from "@/components/deploy-model/AdvancedConfigSection";
+import { RateLimitDefaults } from "@/components/deploy-model/RateLimitSection";
 import { ModelItem } from "@/components/deploy-model/ModelCard";
 import {
   ModelDetails,
@@ -37,6 +38,9 @@ interface DeployModelData {
   volume_size_gb: number;
   provider_config: Record<string, string>;
   advanced_config: Record<string, string>;
+  requests_per_minute: number;
+  burst_requests: number;
+  max_concurrent_requests: number;
 }
 
 function mapSearchResults(results: ModelSearchApiResult[]): ModelItem[] {
@@ -202,6 +206,9 @@ export function useDeployModel() {
     volume_size_gb: 50,
     provider_config: {},
     advanced_config: {},
+    requests_per_minute: 0,
+    burst_requests: 0,
+    max_concurrent_requests: 0,
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -217,6 +224,8 @@ export function useDeployModel() {
   const [instances, setInstances] = useState<ComputeInstance[]>([]);
   const [modelDetails, setModelDetails] = useState<ModelDetails | null>(null);
   const [advancedSchema, setAdvancedSchema] = useState<ConfigOption[]>([]);
+  const [rateLimitDefaults, setRateLimitDefaults] =
+    useState<RateLimitDefaults | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -305,6 +314,41 @@ export function useDeployModel() {
       .catch(console.error)
       .finally(() => setIsLoadingCapabilities(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load effective ingress defaults from the gateway so step 4 never hardcodes
+  // them. Values are prefilled only while the user has not entered their own.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/v1/ingress/defaults")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("rate limits unavailable"))))
+      .then((json) => {
+        if (cancelled || !json?.inference) return;
+        const inference = json.inference as {
+          requests_per_minute: number;
+          burst_requests: number;
+          max_concurrent_requests: number;
+          max_requests_per_minute: number;
+        };
+        const next: RateLimitDefaults = {
+          requestsPerMinute: inference.requests_per_minute,
+          burstRequests: inference.burst_requests,
+          maxConcurrentRequests: inference.max_concurrent_requests,
+          maxRequestsPerMinute: inference.max_requests_per_minute,
+        };
+        setRateLimitDefaults(next);
+        setData((d) => ({
+          ...d,
+          requests_per_minute: d.requests_per_minute || next.requestsPerMinute,
+          burst_requests: d.burst_requests || next.burstRequests,
+          max_concurrent_requests:
+            d.max_concurrent_requests || next.maxConcurrentRequests,
+        }));
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load runtime schema
@@ -534,6 +578,9 @@ export function useDeployModel() {
           strategy: data.strategy,
           volume_size_gb: data.volume_size_gb,
           provider_config: data.provider_config,
+          requests_per_minute: data.requests_per_minute,
+          burst_requests: data.burst_requests,
+          max_concurrent_requests: data.max_concurrent_requests,
           advanced_config: {
             ...advancedConfig,
             ...(data.api_key ? { api_key: data.api_key } : {}),
@@ -575,6 +622,9 @@ export function useDeployModel() {
       strategy: data.strategy,
       volume_size_gb: data.volume_size_gb,
       provider_config: data.provider_config,
+      requests_per_minute: data.requests_per_minute,
+      burst_requests: data.burst_requests,
+      max_concurrent_requests: data.max_concurrent_requests,
       advanced_config: {
         ...advancedConfig,
         ...(data.api_key ? { api_key: "••••••••" } : {}),
@@ -630,6 +680,7 @@ export function useDeployModel() {
     modelDetails,
     advancedSchema,
     advancedConfig,
+    rateLimitDefaults,
     showAdvanced,
     setShowAdvanced,
     isDeploying,

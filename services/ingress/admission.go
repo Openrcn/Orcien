@@ -4,6 +4,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	appconfig "orcn/core/config"
 )
 
 var (
@@ -48,13 +50,7 @@ func (b *tokenBucket) allow(now time.Time, rpm, burst int) bool {
 }
 
 func defaultBurst(rpm int) int {
-	if rpm < 1 {
-		return 1
-	}
-	if rpm > 100 {
-		return 100
-	}
-	return rpm
+	return appconfig.DefaultBurst(rpm)
 }
 
 func minFloat(a, b float64) float64 {
@@ -71,12 +67,14 @@ type routeAdmission struct {
 
 type AdmissionController struct {
 	mu      sync.Mutex
+	cfg     Config
 	routes  map[string]*routeAdmission
 	globals map[string]*routeAdmission
 }
 
 func NewAdmissionController(cfg Config) *AdmissionController {
 	return &AdmissionController{
+		cfg:     cfg,
 		routes:  make(map[string]*routeAdmission),
 		globals: make(map[string]*routeAdmission),
 	}
@@ -136,16 +134,28 @@ func consume(bucket *tokenBucket, now time.Time, rpm, burst int) {
 
 func exceeds(active, limit int) bool { return limit > 0 && active >= limit }
 
-func (c *AdmissionController) effectivePolicy(kind string, requested AdmissionPolicy) AdmissionPolicy {
-	defaultRPM, maxRPM, defaultConcurrent := 120, 1200, 32
-	if kind == "workload" || kind == "container" {
-		defaultRPM, maxRPM, defaultConcurrent = 6000, 30000, 500
+func (c *AdmissionController) policyDefaults(kind string) (rpm, burst, concurrent, maxRPM int) {
+	if kind == "workload" {
+		return c.cfg.WorkloadDefaultRPM, c.cfg.WorkloadDefaultBurst,
+			c.cfg.WorkloadDefaultConcurrent, c.cfg.WorkloadMaxRPM
 	}
+	return c.cfg.InferenceDefaultRPM, c.cfg.InferenceDefaultBurst,
+		c.cfg.InferenceDefaultConcurrent, c.cfg.InferenceMaxRPM
+}
+
+func (c *AdmissionController) effectivePolicy(kind string, requested AdmissionPolicy) AdmissionPolicy {
+	defaultRPM, defaultBurst, defaultConcurrent, maxRPM := c.policyDefaults(kind)
 	if requested.RequestsPerMinute == 0 {
 		requested.RequestsPerMinute = defaultRPM
 	}
 	if maxRPM > 0 && requested.RequestsPerMinute > maxRPM {
 		requested.RequestsPerMinute = maxRPM
+	}
+	if requested.BurstRequests == 0 {
+		if defaultBurst <= 0 {
+			defaultBurst = appconfig.DefaultBurst(requested.RequestsPerMinute)
+		}
+		requested.BurstRequests = minInt(defaultBurst, requested.RequestsPerMinute)
 	}
 	if requested.MaxConcurrentRequests == 0 {
 		requested.MaxConcurrentRequests = defaultConcurrent
@@ -154,8 +164,15 @@ func (c *AdmissionController) effectivePolicy(kind string, requested AdmissionPo
 }
 
 func (c *AdmissionController) globalPolicy(kind string) (int, int) {
-	if kind == "workload" || kind == "container" {
-		return 0, 0
+	if kind == "workload" {
+		return c.cfg.WorkloadGlobalRPM, c.cfg.WorkloadGlobalConcurrent
 	}
-	return 0, 0
+	return c.cfg.InferenceGlobalRPM, c.cfg.InferenceGlobalConcurrent
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

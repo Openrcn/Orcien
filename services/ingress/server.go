@@ -156,6 +156,16 @@ func (s *Server) syncRoutes() {
 			var endpoints []core.Endpoint
 			if err := json.Unmarshal([]byte(node.EndpointsJSON), &endpoints); err == nil && len(endpoints) > 0 {
 
+				shortNodeID := strings.ToLower(node.ID)
+				if len(shortNodeID) > 8 {
+					shortNodeID = shortNodeID[:8]
+				}
+				policy := AdmissionPolicy{
+					RequestsPerMinute:     d.RequestsPerMinute,
+					BurstRequests:         d.BurstRequests,
+					MaxConcurrentRequests: d.MaxConcurrentRequests,
+				}
+
 				ep0 := endpoints[0]
 				for _, endpoint := range endpoints {
 					if endpoint.Primary {
@@ -163,22 +173,40 @@ func (s *Server) syncRoutes() {
 						break
 					}
 				}
-				targetURLStr0 := ep0.BaseURL
-				if !strings.HasPrefix(targetURLStr0, "http") {
-					proto := "http"
-					if ep0.Protocol != "" {
-						proto = ep0.Protocol
+
+				parseEndpointURL := func(ep core.Endpoint) (*url.URL, bool) {
+					targetURLStr := ep.BaseURL
+					if !strings.HasPrefix(targetURLStr, "http") {
+						proto := "http"
+						if ep.Protocol != "" {
+							proto = ep.Protocol
+						}
+						targetURLStr = proto + "://" + ep.BaseURL
 					}
-					targetURLStr0 = proto + "://" + ep0.BaseURL
+					parsed, err := url.Parse(targetURLStr)
+					return parsed, err == nil
 				}
 
-				if parsedURL0, err := url.Parse(targetURLStr0); err == nil {
+				if parsedURL0, ok := parseEndpointURL(ep0); ok {
 					primary := routeTarget{nodeID: node.ID, targetURL: parsedURL0, containerID: ep0.ContainerID, port: ep0.Port}
-					addNodeToRoute(d.RouteKey, primary, d.ModelID, d.WorkloadType, AdmissionPolicy{
-						RequestsPerMinute:     d.RequestsPerMinute,
-						BurstRequests:         d.BurstRequests,
-						MaxConcurrentRequests: d.MaxConcurrentRequests,
-					})
+					addNodeToRoute(d.RouteKey, primary, d.ModelID, d.WorkloadType, policy)
+					// Primary node-specific route: <shortNodeID>.<routeKey>
+					if shortNodeID != "" {
+						addNodeToRoute(fmt.Sprintf("%s.%s", shortNodeID, d.RouteKey), primary, d.ModelID, d.WorkloadType, policy)
+					}
+				}
+
+				// Per-port node-specific routes: <shortNodeID>-<port>.<routeKey>
+				if shortNodeID != "" {
+					for _, ep := range endpoints {
+						if ep.Port <= 0 {
+							continue
+						}
+						if parsedURL, ok := parseEndpointURL(ep); ok {
+							target := routeTarget{nodeID: node.ID, targetURL: parsedURL, containerID: ep.ContainerID, port: ep.Port}
+							addNodeToRoute(fmt.Sprintf("%s-%d.%s", shortNodeID, ep.Port, d.RouteKey), target, d.ModelID, d.WorkloadType, policy)
+						}
+					}
 				}
 			}
 		}
@@ -312,7 +340,7 @@ func (s *Server) routesAreStale() bool {
 }
 
 func (s *Server) transportFor(kind string) *http.Transport {
-	if kind == "workload" || kind == "container" {
+	if kind == "workload" {
 		return s.workloadTransport
 	}
 	return s.inferenceTransport

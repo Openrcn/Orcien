@@ -32,6 +32,8 @@ type Config struct {
 	IngressInferenceMaxRPM            int
 	IngressWorkloadDefaultConcurrent  int
 	IngressInferenceDefaultConcurrent int
+	IngressWorkloadDefaultBurst       int
+	IngressInferenceDefaultBurst      int
 	IngressWorkloadGlobalRPM          int
 	IngressInferenceGlobalRPM         int
 	IngressWorkloadGlobalConcurrent   int
@@ -77,7 +79,26 @@ func LoadConfig() (*Config, error) {
 		InternalAPIToken:                  internalToken,
 	}
 
+	// Burst defaults follow the RPM default when not explicitly configured.
+	cfg.IngressInferenceDefaultBurst = getEnvAsInt(
+		"INGRESS_INFERENCE_DEFAULT_BURST", DefaultBurst(cfg.IngressInferenceDefaultRPM))
+	cfg.IngressWorkloadDefaultBurst = getEnvAsInt(
+		"INGRESS_WORKLOAD_DEFAULT_BURST", DefaultBurst(cfg.IngressWorkloadDefaultRPM))
+
 	return cfg, nil
+}
+
+// DefaultBurst is the token-bucket burst used when a deployment leaves
+// burst_requests unset. It is shared by ingress enforcement and the gateway
+// API that publishes the current defaults to the console.
+func DefaultBurst(rpm int) int {
+	if rpm < 1 {
+		return 1
+	}
+	if rpm > 100 {
+		return 100
+	}
+	return rpm
 }
 
 func getEnv(key, defaultVal string) string {

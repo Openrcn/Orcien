@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { K } from "@/components/providers/kit";
+import { useOrg } from "@/lib/org";
+import { deploymentUrl } from "@/lib/public-url";
 
 interface DeployConfigSectionProps {
   name: string;
@@ -46,6 +48,7 @@ export function DeployConfigSection({
   onHfTokenChange,
 }: DeployConfigSectionProps) {
   const [requireAuth, setRequireAuth] = useState(!!apiKey);
+  const { slug: orgSlug } = useOrg();
 
   const handleGenerateName = () => {
     const rand = Math.random().toString(36).substring(2, 6);
@@ -92,7 +95,7 @@ export function DeployConfigSection({
             <p className="text-[11px] text-mut">
               Lowercase letters, numbers and dashes. Becomes{" "}
               <span className="font-mono">
-                {name || "<name>"}.orcn.network
+                {deploymentUrl(name || "name", orgSlug)}
               </span>
               .
             </p>

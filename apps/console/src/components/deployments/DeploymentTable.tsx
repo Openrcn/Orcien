@@ -72,12 +72,13 @@ function statusDot(status: string) {
 
 function logoFor(d: Deployment) {
   if (d.model && d.model !== "-") return d.model;
-  return d.kind.toLowerCase().includes("container") ? "container" : "model";
+  const k = d.kind.toLowerCase();
+  return k.includes("workload") || k.includes("container") ? "container" : "model";
 }
 
 function kindLabel(kind: string) {
   const k = kind.toLowerCase();
-  if (k.includes("container")) return "Container";
+  if (k.includes("workload") || k.includes("container")) return "Workload";
   if (k.includes("model")) return "Model inference";
   return kind || "-";
 }
@@ -239,7 +240,7 @@ export function DeploymentTable() {
                 name: d.Name || "Unnamed deployment",
                 status: status.toLowerCase(),
                 model: d.ModelID || "-",
-                kind: d.WorkloadType || (d.ModelID ? "model_inference" : "container"),
+                kind: d.WorkloadType || (d.ModelID ? "model_inference" : "workload"),
                 deployType: (d.WorkloadType || "other").toLowerCase(),
                 provider: d.ProviderID || "-",
                 resource: d.InstanceName || "-",

@@ -163,17 +163,25 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 		RuntimeID:             req.RuntimeID,
 		Task:                  string(req.Task),
 		ModelID:               req.ModelID,
-		WorkloadType:          "model_inference",
+		WorkloadType:          models.WorkloadTypeModelInference,
 		Replicas:              req.Replicas,
 		RequestsPerMinute:     req.RequestsPerMinute,
 		BurstRequests:         req.BurstRequests,
 		MaxConcurrentRequests: req.MaxConcurrentRequests,
 		JobSpecJSON:           specJSON,
 	}
+	// Purge any stale soft-deleted row with the same (organization_id, name) so
+	// the composite unique index does not block re-using a previously failed/deleted name.
+	s.DB.Unscoped().Where("organization_id = ? AND name = ? AND deleted_at IS NOT NULL", organizationID, req.Name).Delete(&models.Deployment{})
+
 	if err := s.DB.Create(&dbDeployment).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to save deployment: "+err.Error())
 		return
 	}
+
+	// 1.5 Generate Database Endpoints for UI to query
+	ports := extractExposedPorts(spec)
+	s.generateDeploymentEndpoints(dbDeployment.ID, routeKey, ports)
 
 	// 2. Loop to create Nodes (each provider job = 1 Node)
 	var createdNodeIDs []string
@@ -204,10 +212,12 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 			break
 		}
 		createdNodeIDs = append(createdNodeIDs, providerJobID)
+		s.generateNodeEndpoints(dbDeployment.ID, routeKey, providerJobID, ports)
 	}
 
 	if len(createdNodeIDs) == 0 && lastErr != nil {
-		s.DB.Delete(&dbDeployment)
+		s.DB.Unscoped().Where("deployment_id = ?", dbDeployment.ID).Delete(&models.RouteEndpoint{})
+		s.DB.Unscoped().Delete(&dbDeployment)
 		respondError(w, http.StatusInternalServerError, "Failed to create nodes: "+lastErr.Error())
 		return
 	}
@@ -401,15 +411,32 @@ func (s *Server) generateDeploymentEndpoints(deploymentID, name string, ports []
 	}
 }
 
-func (s *Server) generateNodeEndpoints(deploymentID, nodeID string, ports []int) {
-	shortNodeID := nodeID
+func extractExposedPorts(spec *core.JobSpec) []int {
+	if spec == nil {
+		return nil
+	}
+	var ports []int
+	for _, c := range spec.Containers {
+		for _, p := range c.Args.Expose {
+			ports = append(ports, p.Port)
+		}
+	}
+	return ports
+}
+
+func (s *Server) generateNodeEndpoints(deploymentID, routeKey, nodeID string, ports []int) {
+	shortNodeID := strings.ToLower(nodeID)
 	if len(shortNodeID) > 8 {
 		shortNodeID = shortNodeID[:8]
+	}
+	suffix := ""
+	if routeKey != "" {
+		suffix = "." + routeKey
 	}
 	for i, port := range ports {
 		s.DB.Create(&models.RouteEndpoint{
 			ID:           fmt.Sprintf("ep-node-%s-%d", shortNodeID, port),
-			Subdomain:    fmt.Sprintf("%s-%d", shortNodeID, port),
+			Subdomain:    fmt.Sprintf("%s-%d%s", shortNodeID, port, suffix),
 			TargetPort:   port,
 			Type:         models.EndpointTypeNode,
 			DeploymentID: deploymentID,
@@ -419,7 +446,7 @@ func (s *Server) generateNodeEndpoints(deploymentID, nodeID string, ports []int)
 		if i == 0 {
 			s.DB.Create(&models.RouteEndpoint{
 				ID:           fmt.Sprintf("ep-node-%s-primary", shortNodeID),
-				Subdomain:    shortNodeID,
+				Subdomain:    fmt.Sprintf("%s%s", shortNodeID, suffix),
 				TargetPort:   port,
 				Type:         models.EndpointTypeNode,
 				DeploymentID: deploymentID,
@@ -513,7 +540,7 @@ func (s *Server) handleCreateWorkload(w http.ResponseWriter, r *http.Request) {
 		ProviderConnectionID:  req.ProviderConnectionID,
 		InstanceName:          req.InstanceName,
 		InstanceTypeID:        req.InstanceTypeID,
-		WorkloadType:          "workload",
+		WorkloadType:          models.WorkloadTypeWorkload,
 		Replicas:              req.Replicas,
 		RequestsPerMinute:     req.RequestsPerMinute,
 		BurstRequests:         req.BurstRequests,
@@ -521,18 +548,15 @@ func (s *Server) handleCreateWorkload(w http.ResponseWriter, r *http.Request) {
 		JobSpecJSON:           string(specBytes),
 	}
 
+	s.DB.Unscoped().Where("organization_id = ? AND name = ? AND deleted_at IS NOT NULL", organizationID, req.Name).Delete(&models.Deployment{})
+
 	if err := s.DB.Create(&dbDeployment).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to save deployment to db: "+err.Error())
 		return
 	}
 
 	// 3.5 Generate Database Endpoints for UI to query
-	var ports []int
-	for _, c := range internalSpec.Containers {
-		for _, p := range c.Args.Expose {
-			ports = append(ports, p.Port)
-		}
-	}
+	ports := extractExposedPorts(internalSpec)
 	s.generateDeploymentEndpoints(dbDeployment.ID, routeKey, ports)
 
 	// 4. Launch on the infrastructure
@@ -564,11 +588,12 @@ func (s *Server) handleCreateWorkload(w http.ResponseWriter, r *http.Request) {
 		}
 		createdNodeIDs = append(createdNodeIDs, providerJobID)
 
-		s.generateNodeEndpoints(dbDeployment.ID, providerJobID, ports)
+		s.generateNodeEndpoints(dbDeployment.ID, routeKey, providerJobID, ports)
 	}
 
 	if len(createdNodeIDs) == 0 && lastErr != nil {
-		s.DB.Delete(&dbDeployment)
+		s.DB.Unscoped().Where("deployment_id = ?", dbDeployment.ID).Delete(&models.RouteEndpoint{})
+		s.DB.Unscoped().Delete(&dbDeployment)
 		respondError(w, http.StatusInternalServerError, "Failed to deploy on provider: "+lastErr.Error())
 		return
 	}

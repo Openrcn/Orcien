@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -13,6 +14,9 @@ import { Logo, getLogoCategory } from "@/components/ui/Logos";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { getDerivedDeploymentStatus } from "@/lib/deployment-status";
 import { useOrgHref } from "@/lib/org";
+import { apiFetch } from "@/lib/api";
+import { routeUrl } from "@/lib/public-url";
+import type { ProviderConnection } from "@/components/providers/api";
 
 type OverviewTabProps = {
   deployment: any;
@@ -85,11 +89,6 @@ function buildSpecPorts(deployment: any): SpecPort[] {
   return ports.sort((a, b) => a.port - b.port);
 }
 
-function scheme(): string {
-  if (typeof window === "undefined") return "http";
-  return window.location.protocol === "https:" ? "https" : "http";
-}
-
 export function OverviewTab({
   deployment,
   nodes,
@@ -106,6 +105,25 @@ export function OverviewTab({
     ),
   ).length;
   const providerName = deployment.ProviderID || "-";
+  const [connections, setConnections] = useState<ProviderConnection[]>([]);
+  const connectionID = String(deployment.ProviderConnectionID || "");
+  const connectionName = connections.find((c) => c.ID === connectionID)?.Name;
+
+  // The deployment stores the connection ID, not its display name.
+  useEffect(() => {
+    if (!connectionID) return;
+    let cancelled = false;
+    apiFetch("/api/v1/provider-connections")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list: ProviderConnection[]) => {
+        if (!cancelled && Array.isArray(list)) setConnections(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionID]);
+
   const runtimeName = deployment.RuntimeID || "";
   const runtimeHasLogo =
     runtimeName && getLogoCategory(runtimeName) !== "unknown";
@@ -114,16 +132,16 @@ export function OverviewTab({
   const baseUrl = String(
     deployment.GatewayURL || deployment.Endpoint || deployment.URL || "",
   ).replace(/\/+$/, "");
-  const host =
-    typeof window !== "undefined" ? window.location.hostname : "localhost";
+  const routeKey = String(deployment.RouteKey || "").trim();
   const slug = String(deployment.Name || deployment.ID || "deployment")
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-");
 
-  /** Reserved gateway URL for a port: subdomain route, or base URL + port */
+  /** Reserved gateway URL for a port: ingress routeKey URL, or base URL + port */
   const reservedUrl = (port: number) => {
     if (baseUrl) return `${baseUrl.replace(/:\d+$/, "")}:${port}`;
-    return `${scheme()}://${slug}-${port}.${host}`;
+    if (routeKey) return routeUrl(routeKey);
+    return routeUrl(slug);
   };
   const publicCount = specPorts.filter((p) => p.isPublic).length;
   const derivedStatus = getDerivedDeploymentStatus(deployment, nodes);
@@ -213,6 +231,11 @@ export function OverviewTab({
                   <Logo name={providerName} size={15} />
                 )}
                 <span className="capitalize">{providerName}</span>
+                {connectionName && (
+                  <span className="text-[var(--text-muted)]">
+                    ({connectionName})
+                  </span>
+                )}
               </div>
             }
           />
@@ -226,7 +249,11 @@ export function OverviewTab({
             }
           />
           <InfoRow
-            label="Instance Type"
+            label={
+              providerName.toLowerCase() === "local"
+                ? "Machine (agent)"
+                : "Instance Type"
+            }
             value={deployment.InstanceName || "-"}
             copyable
           />

@@ -45,6 +45,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/runtimes", s.handleListRuntimes)
 	s.mux.HandleFunc("GET /api/v1/runtimes/schema", s.handleGetRuntimeSchema)
 
+	s.mux.HandleFunc("GET /api/v1/ingress/defaults", s.handleGetIngressDefaults)
+
 	s.mux.HandleFunc("POST /api/v1/deployments", s.handleCreateDeployment)
 	s.mux.HandleFunc("GET /api/v1/deployments", s.handleListDeployments)
 	s.mux.HandleFunc("GET /api/v1/deployments/{id}", s.handleGetDeployment)
@@ -109,5 +111,10 @@ func respondJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func respondError(w http.ResponseWriter, status int, message string) {
+	if status >= http.StatusInternalServerError {
+		apiLog.Error("HTTP %d: %s", status, message)
+	} else if status >= http.StatusBadRequest {
+		apiLog.Warn("HTTP %d: %s", status, message)
+	}
 	respondJSON(w, status, map[string]string{"error": message})
 }

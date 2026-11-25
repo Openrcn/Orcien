@@ -7,6 +7,7 @@ import { ModelSearchPanel } from "@/components/deploy-model/ModelSearchPanel";
 import { ComputeSection } from "@/components/deploy-model/ComputeSection";
 import { EngineSection } from "@/components/deploy-model/EngineSection";
 import { DeployConfigSection } from "@/components/deploy-model/DeployConfigSection";
+import { RateLimitSection } from "@/components/deploy-model/RateLimitSection";
 import { ReviewSection } from "@/components/deploy-model/ReviewSection";
 import { DeploySummary } from "@/components/deploy-model/DeploySummary";
 import { useDeployModel } from "./use-deploy-model";
@@ -30,6 +31,7 @@ function DeployAIModelContent() {
     modelDetails,
     advancedSchema,
     advancedConfig,
+    rateLimitDefaults,
     isDeploying,
     handleSearch,
     handleModalityChange,
@@ -134,6 +136,7 @@ function DeployAIModelContent() {
             <EngineSection
               runtime={data.runtime}
               modality={data.modality}
+              taskLabel={taskLabel}
               schema={advancedSchema}
               config={advancedConfig}
               onChange={(key, value) =>
@@ -147,23 +150,40 @@ function DeployAIModelContent() {
           )}
 
           {step === 4 && (
-            <DeployConfigSection
-              name={data.name}
-              onNameChange={(val) => updateData({ name: val })}
-              replicas={data.replicas}
-              onReplicasChange={(val) => updateData({ replicas: val })}
-              strategy={data.strategy}
-              onStrategyChange={(val) => updateData({ strategy: val })}
-              timeoutMinutes={data.timeout_minutes}
-              onTimeoutMinutesChange={(val) =>
-                updateData({ timeout_minutes: val })
-              }
-              apiKey={data.api_key}
-              onApiKeyChange={(val) => updateData({ api_key: val })}
-              gated={Boolean(modelDetails?.gated)}
-              hfToken={data.hf_token}
-              onHfTokenChange={(token) => updateData({ hf_token: token })}
-            />
+            <div className="space-y-6">
+              <DeployConfigSection
+                name={data.name}
+                onNameChange={(val) => updateData({ name: val })}
+                replicas={data.replicas}
+                onReplicasChange={(val) => updateData({ replicas: val })}
+                strategy={data.strategy}
+                onStrategyChange={(val) => updateData({ strategy: val })}
+                timeoutMinutes={data.timeout_minutes}
+                onTimeoutMinutesChange={(val) =>
+                  updateData({ timeout_minutes: val })
+                }
+                apiKey={data.api_key}
+                onApiKeyChange={(val) => updateData({ api_key: val })}
+                gated={Boolean(modelDetails?.gated)}
+                hfToken={data.hf_token}
+                onHfTokenChange={(token) => updateData({ hf_token: token })}
+              />
+              <RateLimitSection
+                defaults={rateLimitDefaults}
+                requestsPerMinute={data.requests_per_minute}
+                onRequestsPerMinuteChange={(val) =>
+                  updateData({ requests_per_minute: val })
+                }
+                burstRequests={data.burst_requests}
+                onBurstRequestsChange={(val) =>
+                  updateData({ burst_requests: val })
+                }
+                maxConcurrentRequests={data.max_concurrent_requests}
+                onMaxConcurrentRequestsChange={(val) =>
+                  updateData({ max_concurrent_requests: val })
+                }
+              />
+            </div>
           )}
 
           {step === 5 && (

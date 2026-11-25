@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Box, ChevronRight, Container, Info, Loader2 } from "lucide-react";
+import { useOrg } from "@/lib/org";
+import { deploymentUrl } from "@/lib/public-url";
 
 interface WorkloadSummaryProps {
   formData: any;
@@ -25,6 +27,7 @@ export function WorkloadSummary({
   canNext,
 }: WorkloadSummaryProps) {
   const [showJSON, setShowJSON] = useState(false);
+  const { slug: orgSlug } = useOrg();
   const template = templates.find((item) => item.id === formData.templateId);
   const instance = formData.instance;
 
@@ -166,7 +169,7 @@ export function WorkloadSummary({
             </p>
             <div className="flex h-9 items-center rounded-lg border border-[var(--dm-card-border)] bg-[var(--dm-card)] px-3 font-mono text-xs text-[var(--text-muted)]">
               {formData.workloadName
-                ? `${formData.workloadName}.orcn.network`
+                ? deploymentUrl(formData.workloadName, orgSlug)
                 : "-"}
             </div>
           </section>

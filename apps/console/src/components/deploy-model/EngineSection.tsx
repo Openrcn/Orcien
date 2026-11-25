@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/Select";
 import { K } from "@/components/providers/kit";
 import { ConfigOption } from "./AdvancedConfigSection";
+import { EngineInfoCard } from "./EngineInfoCard";
+import { getEngineMeta } from "./engine-meta";
 
 interface EngineSectionProps {
   runtime: string;
   modality: string;
+  taskLabel?: string;
   schema: ConfigOption[];
   config: Record<string, string>;
   onChange: (key: string, value: string) => void;
@@ -37,27 +40,11 @@ const IMPORTANT_KEYS = new Set([
   "cuda_graphs",
 ]);
 
-/* Backend-managed container facts, shown read-only (not user configurable). */
-const CONTAINER_DEFAULTS: Record<
-  string,
-  { image: string; health: string; port: number }
-> = {
-  vllm: {
-    image: "docker.io/vllm/vllm-openai:v0.26.0",
-    health: "/health",
-    port: 9000,
-  },
-  ollama: {
-    image: "ollama/ollama:latest",
-    health: "/api/tags",
-    port: 11434,
-  },
-};
-
-/* Engine step: Settings (open) · Advanced settings (collapsed) · Container */
+/* Engine step: engine info · Settings (open) · Advanced settings · Container */
 export function EngineSection({
   runtime,
   modality,
+  taskLabel,
   schema,
   config,
   onChange,
@@ -89,10 +76,18 @@ export function EngineSection({
     }
   }
 
-  const container = CONTAINER_DEFAULTS[runtime];
+  const container = getEngineMeta(runtime);
 
   return (
     <div className="space-y-6">
+      {/* 0. Engine identity + read-only facts */}
+      <EngineInfoCard
+        runtime={runtime}
+        taskLabel={taskLabel}
+        image={image}
+        optionCount={options.length}
+      />
+
       {/* 1. Settings — only when the runtime exposes important keys */}
       {important.length > 0 && (
         <section className={K.dbx}>

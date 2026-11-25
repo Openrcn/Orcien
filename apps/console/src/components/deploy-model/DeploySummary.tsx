@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "cn";
 import { K } from "@/components/providers/kit";
+import { useOrg } from "@/lib/org";
+import { deploymentUrl } from "@/lib/public-url";
 import { ComputeInstance } from "@/components/create/instance-utils";
 import { ModelDetails } from "./model-types";
 import {
@@ -59,6 +61,7 @@ export function DeploySummary({
   canNext,
 }: DeploySummaryProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { slug: orgSlug } = useOrg();
   const modelId = data.model;
   const modelName = modelId ? modelId.split("/").pop() : "";
   const modelOrg =
@@ -254,7 +257,7 @@ export function DeploySummary({
               <Info className="size-3 text-mut" strokeWidth={1.7} />
             </div>
             <div className="flex h-9 items-center rounded-xl border border-line bg-card px-3 font-mono text-[11.5px] text-mut">
-              {data.name ? `${data.name}.orcn.network` : "-"}
+              {data.name ? deploymentUrl(data.name, orgSlug) : "-"}
             </div>
           </div>
         </div>

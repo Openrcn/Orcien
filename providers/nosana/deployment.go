@@ -12,6 +12,7 @@ import (
 func (c *Client) CreateDeployment(name, instanceTypeID string, spec *core.JobSpec) (string, error) {
 	ops := make([]map[string]any, 0)
 
+	seenOpIDs := make(map[string]bool, len(spec.Containers))
 	for _, container := range spec.Containers {
 		args := map[string]any{
 			"image": container.Args.Image,
@@ -89,7 +90,7 @@ func (c *Client) CreateDeployment(name, instanceTypeID string, spec *core.JobSpe
 
 		ops = append(ops, map[string]any{
 			"type": "container/run",
-			"id":   container.ID,
+			"id":   nosanaOpID(container, seenOpIDs),
 			"args": args,
 		})
 	}
@@ -254,4 +255,56 @@ func (c *Client) GetNodeInfo(providerJobID string) (*core.NodeInfo, error) {
 	}
 
 	return info, nil
+}
+
+// nosanaOpID converts a container ID/name into a Nosana-compatible operation ID
+// matching ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ (no dots).
+func nosanaOpID(container core.ContainerSpec, seen map[string]bool) string {
+	raw := container.ID
+	if strings.TrimSpace(raw) == "" {
+		raw = container.Name
+	}
+
+	var b strings.Builder
+	prevDash := false
+	for _, r := range raw {
+		switch {
+		case (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_':
+			b.WriteRune(r)
+			prevDash = false
+		case r == '-':
+			if !prevDash {
+				b.WriteRune('-')
+				prevDash = true
+			}
+		default:
+			if !prevDash {
+				b.WriteRune('-')
+				prevDash = true
+			}
+		}
+	}
+
+	base := strings.Trim(b.String(), "-_")
+	if base == "" {
+		base = "op"
+	}
+	if len(base) > 63 {
+		base = strings.TrimRight(base[:63], "-_")
+		if base == "" {
+			base = "op"
+		}
+	}
+
+	candidate := base
+	for i := 2; seen[candidate]; i++ {
+		suffix := fmt.Sprintf("-%d", i)
+		prefix := base
+		if len(prefix)+len(suffix) > 63 {
+			prefix = strings.TrimRight(prefix[:63-len(suffix)], "-_")
+		}
+		candidate = prefix + suffix
+	}
+	seen[candidate] = true
+	return candidate
 }

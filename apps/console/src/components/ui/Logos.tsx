@@ -35,7 +35,7 @@ import {
   RiSparkling2Fill,
 } from "react-icons/ri";
 
-import { SiVllm } from "react-icons/si";
+import { SiVllm, SiOllama } from "react-icons/si";
 import { BsOpenai } from "react-icons/bs";
 
 export interface LogoProps {
@@ -44,7 +44,12 @@ export interface LogoProps {
   className?: string;
 }
 
-export type LogoCategory = "provider" | "model" | "general" | "unknown";
+export type LogoCategory =
+  | "provider"
+  | "model"
+  | "engine"
+  | "general"
+  | "unknown";
 
 function normalize(name: string): string {
   return name.toLowerCase().trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
@@ -169,6 +174,12 @@ const MODEL_LOGOS: Record<string, IconType> = {
   baidu: RiRobot2Line,
 };
 
+/* Inference engines shown in the deploy wizard's Engine card. */
+const ENGINE_LOGOS: Record<string, IconType> = {
+  vllm: SiVllm,
+  ollama: SiOllama,
+};
+
 const GENERAL_LOGOS: Record<string, IconType> = {
   ai: RiSparkling2Fill,
   model: RiRobot2Line,
@@ -182,6 +193,7 @@ const GENERAL_LOGOS: Record<string, IconType> = {
 const LOGOS: Record<string, IconType> = {
   ...PROVIDER_LOGOS,
   ...MODEL_LOGOS,
+  ...ENGINE_LOGOS,
   ...GENERAL_LOGOS,
 };
 
@@ -297,11 +309,13 @@ export function getLogoCategory(name: string): LogoCategory {
 
   if (PROVIDER_LOGOS[key]) return "provider";
   if (MODEL_LOGOS[key]) return "model";
+  if (ENGINE_LOGOS[key]) return "engine";
   if (GENERAL_LOGOS[key]) return "general";
   const fuzzy = findLogoKey(name);
   if (fuzzy) {
     if (PROVIDER_LOGOS[fuzzy]) return "provider";
     if (MODEL_LOGOS[fuzzy]) return "model";
+    if (ENGINE_LOGOS[fuzzy]) return "engine";
     if (GENERAL_LOGOS[fuzzy]) return "general";
   }
   return "unknown";

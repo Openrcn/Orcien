@@ -15,6 +15,7 @@ import {
   SectionCard,
   shortNodeId,
 } from "@/components/deployments/node-detail/shared";
+import { routeUrl } from "@/lib/public-url";
 
 type StatusVariant = (
   status: string,
@@ -36,46 +37,66 @@ type NodeEndpoint = {
 
 function buildEndpoints(deployment: any, node: any): NodeEndpoint[] {
   const out: NodeEndpoint[] = [];
+  const seenPorts = new Set<string>();
+
+  const scheme =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "https"
+      : "http";
+  const routeKey = String(deployment.RouteKey || "").trim();
+  const nodeSlug = shortNodeId(node.ID).toLowerCase();
+
+  const proxyUrlFor = (port: number | string, customSubdomain?: string) => {
+    let sub = customSubdomain ? String(customSubdomain).toLowerCase() : "";
+    if (!sub || (routeKey && !sub.endsWith(`.${routeKey.toLowerCase()}`))) {
+      const base =
+        port !== "-" && Number(port) > 0 ? `${nodeSlug}-${port}` : nodeSlug;
+      sub = routeKey ? `${base}.${routeKey}` : base;
+    }
+    return {
+      subdomain: sub,
+      url: routeUrl(sub),
+    };
+  };
 
   const fromDeployment = (deployment.Endpoints || []).filter(
     (e: any) => e.type === "node" && e.node_id === node.ID,
   );
   for (const ep of fromDeployment) {
-    const subdomain = ep.subdomain || shortNodeId(node.ID);
+    // Skip duplicate primary alias if we already have the explicit port entry
+    if (String(ep.id || "").endsWith("-primary") && seenPorts.has(String(ep.target_port ?? ep.port ?? "-"))) {
+      continue;
+    }
+    const port = ep.target_port ?? ep.port ?? "-";
+    const key = String(port);
+    if (seenPorts.has(key)) continue;
+    seenPorts.add(key);
+
+    const { subdomain, url } = proxyUrlFor(port, ep.subdomain);
     out.push({
-      port: ep.target_port ?? ep.port ?? "-",
-      protocol: ep.protocol || "http",
+      port,
+      protocol: scheme,
       subdomain,
-      url: `http://${subdomain}.localhost`,
+      url,
     });
   }
 
   if (node.EndpointsJSON) {
     try {
-      const nodeSlug = shortNodeId(node.ID);
       const parsed = JSON.parse(node.EndpointsJSON);
       if (Array.isArray(parsed)) {
         for (const e of parsed) {
-          const protocol = e?.protocol || "http";
           const port = e?.port ?? "-";
-          const raw = String(e?.base_url || "");
-          // Self-hosted endpoints point at the node-agent's internal proxy
-          // (carry a container_id). Show this node's own ingress URL instead
-          // of leaking the internal address.
-          const isProxy = Boolean(e?.container_id) || !raw;
-          const friendly =
-            port !== "-" && Number(port) !== 0
-              ? `http://${nodeSlug}-${port}.localhost`
-              : `http://${nodeSlug}.localhost`;
-          const rawUrl = raw
-            ? /^https?:\/\//i.test(raw)
-              ? raw
-              : `${protocol}://${raw}`
-            : friendly;
+          const key = String(port);
+          if (seenPorts.has(key)) continue;
+          seenPorts.add(key);
+
+          const { subdomain, url } = proxyUrlFor(port);
           out.push({
             port,
-            protocol,
-            url: isProxy ? friendly : rawUrl,
+            protocol: scheme,
+            subdomain,
+            url,
           });
         }
       }
@@ -84,8 +105,9 @@ function buildEndpoints(deployment: any, node: any): NodeEndpoint[] {
     }
   }
 
-  if (node.NodeURL && !out.some((e) => e.url === node.NodeURL)) {
-    out.push({ port: "-", protocol: "http", url: node.NodeURL });
+  if (out.length === 0) {
+    const { subdomain, url } = proxyUrlFor("-");
+    out.push({ port: "-", protocol: scheme, subdomain, url });
   }
 
   return out;

@@ -23,6 +23,9 @@ interface ReviewSectionProps {
     instance: ComputeInstance | null;
     volume_size_gb: number;
     provider_config: Record<string, string>;
+    requests_per_minute?: number;
+    burst_requests?: number;
+    max_concurrent_requests?: number;
   };
   modelDetails: ModelDetails | null;
   taskLabel?: string;
@@ -216,6 +219,24 @@ export function ReviewSection({
             <span className="flex-1 text-mut2">API protection</span>
             <b className="font-medium">
               {data.api_key ? "Enabled" : "Disabled"}
+            </b>
+          </div>
+          <div className={K.kv}>
+            <span className="flex-1 text-mut2">Requests / min</span>
+            <b className="font-medium">
+              {data.requests_per_minute || "Server default"}
+            </b>
+          </div>
+          <div className={K.kv}>
+            <span className="flex-1 text-mut2">Burst requests</span>
+            <b className="font-medium">
+              {data.burst_requests || "Server default"}
+            </b>
+          </div>
+          <div className={K.kv}>
+            <span className="flex-1 text-mut2">Max concurrent</span>
+            <b className="font-medium">
+              {data.max_concurrent_requests || "Server default"}
             </b>
           </div>
         </div>

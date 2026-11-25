@@ -29,6 +29,20 @@ func InitDB(filepath string) (*gorm.DB, error) {
 		}
 	}
 
+	// Normalize legacy 'container' or empty workload_type values to 'workload'
+	// before AutoMigrate applies the CHECK constraint.
+	if db.Migrator().HasTable(&Deployment{}) && db.Migrator().HasColumn(&Deployment{}, "WorkloadType") {
+		if err := db.Exec(`UPDATE deployments
+			SET workload_type = CASE
+				WHEN workload_type = 'model_inference' THEN 'model_inference'
+				WHEN model_id IS NOT NULL AND model_id <> '' AND (workload_type IS NULL OR workload_type = '') THEN 'model_inference'
+				ELSE 'workload'
+			END
+			WHERE workload_type IS NULL OR workload_type NOT IN ('workload', 'model_inference')`).Error; err != nil {
+			return nil, err
+		}
+	}
+
 	err = db.AutoMigrate(&Deployment{}, &Node{}, &Job{}, &Secret{}, &Template{}, &Registry{}, &RouteEndpoint{}, &ProviderConnection{}, &Organization{}, &Machine{})
 	if err != nil {
 		return nil, err

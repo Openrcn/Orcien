@@ -6,7 +6,16 @@ import (
 )
 
 func testAdmissionConfig() Config {
-	return Config{}
+	return Config{
+		InferenceDefaultRPM:        120,
+		InferenceDefaultBurst:      100,
+		InferenceDefaultConcurrent: 32,
+		InferenceMaxRPM:            1200,
+		WorkloadDefaultRPM:         6000,
+		WorkloadDefaultBurst:       100,
+		WorkloadDefaultConcurrent:  500,
+		WorkloadMaxRPM:             30000,
+	}
 }
 
 func TestAdmissionIsAggregatePerRoute(t *testing.T) {
@@ -49,5 +58,48 @@ func TestAdmissionOptionalGlobalLimit(t *testing.T) {
 	release()
 	if _, err := c.Acquire("docs.acme", "workload", AdmissionPolicy{RequestsPerMinute: 100, BurstRequests: 100}); err != nil {
 		t.Fatalf("got %v, want nil global limit", err)
+	}
+}
+
+func TestEffectivePolicyUsesConfiguredDefaults(t *testing.T) {
+	cfg := testAdmissionConfig()
+	cfg.InferenceDefaultRPM = 7
+	cfg.InferenceDefaultBurst = 3
+	cfg.InferenceDefaultConcurrent = 4
+	cfg.InferenceMaxRPM = 10
+	c := NewAdmissionController(cfg)
+
+	got := c.effectivePolicy("model_inference", AdmissionPolicy{})
+	want := AdmissionPolicy{RequestsPerMinute: 7, BurstRequests: 3, MaxConcurrentRequests: 4}
+	if got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestEffectivePolicyCapsAtConfiguredMax(t *testing.T) {
+	cfg := testAdmissionConfig()
+	cfg.InferenceDefaultRPM = 7
+	cfg.InferenceMaxRPM = 10
+	c := NewAdmissionController(cfg)
+
+	got := c.effectivePolicy("model_inference", AdmissionPolicy{RequestsPerMinute: 999})
+	if got.RequestsPerMinute != 10 {
+		t.Fatalf("got RPM %d, want configured max 10", got.RequestsPerMinute)
+	}
+}
+
+func TestGlobalPolicyUsesConfiguredValues(t *testing.T) {
+	cfg := testAdmissionConfig()
+	cfg.InferenceGlobalRPM = 50
+	cfg.InferenceGlobalConcurrent = 5
+	cfg.WorkloadGlobalRPM = 500
+	cfg.WorkloadGlobalConcurrent = 25
+	c := NewAdmissionController(cfg)
+
+	if rpm, concurrent := c.globalPolicy("model_inference"); rpm != 50 || concurrent != 5 {
+		t.Fatalf("inference globals = %d/%d, want 50/5", rpm, concurrent)
+	}
+	if rpm, concurrent := c.globalPolicy("workload"); rpm != 500 || concurrent != 25 {
+		t.Fatalf("workload globals = %d/%d, want 500/25", rpm, concurrent)
 	}
 }

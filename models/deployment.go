@@ -1,9 +1,15 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
+)
+
+const (
+	WorkloadTypeModelInference = "model_inference"
+	WorkloadTypeWorkload       = "workload"
 )
 
 type Deployment struct {
@@ -25,7 +31,7 @@ type Deployment struct {
 	RuntimeID    string
 	Task         string
 	ModelID      string
-	WorkloadType string `gorm:"not null;default:'model_inference'"`
+	WorkloadType string `gorm:"not null;default:'model_inference';check:workload_type IN ('workload', 'model_inference')"`
 	Replicas     int    `gorm:"default:1"`
 
 	// Zero means "use the ingress default for this workload type". These are
@@ -44,6 +50,19 @@ type Deployment struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
+
+// BeforeSave enforces the WorkloadType enum ('workload' or 'model_inference').
+func (d *Deployment) BeforeSave(tx *gorm.DB) error {
+	if d.WorkloadType == "" {
+		d.WorkloadType = WorkloadTypeModelInference
+	}
+	switch d.WorkloadType {
+	case WorkloadTypeWorkload, WorkloadTypeModelInference:
+		return nil
+	default:
+		return fmt.Errorf("invalid workload_type %q: must be %q or %q", d.WorkloadType, WorkloadTypeWorkload, WorkloadTypeModelInference)
+	}
 }
 
 type Node struct {
