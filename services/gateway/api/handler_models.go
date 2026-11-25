@@ -9,12 +9,12 @@ import (
 
 func (s *Server) handleSearchModels(w http.ResponseWriter, r *http.Request) {
 	runtimeID := r.URL.Query().Get("runtime")
-	query := r.URL.Query().Get("q")
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	task := core.NormalizeModelTask(core.ModelTask(r.URL.Query().Get("task")))
 	capabilities := core.NormalizeCapabilities(splitCSV(r.URL.Query().Get("capabilities")))
 
-	if runtimeID == "" || query == "" {
-		respondError(w, http.StatusBadRequest, "Missing runtime or q parameter")
+	if runtimeID == "" {
+		respondError(w, http.StatusBadRequest, "Missing runtime parameter")
 		return
 	}
 

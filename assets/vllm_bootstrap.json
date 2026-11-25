@@ -1,0 +1,244 @@
+{
+  "text-generation": [
+    {
+      "id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "author": "meta-llama",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8,
+      "downloads": 2840000,
+      "tags": ["llama-3.1", "instruct"]
+    },
+    {
+      "id": "meta-llama/Meta-Llama-3-8B-Instruct",
+      "author": "meta-llama",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8,
+      "downloads": 2190000,
+      "tags": ["llama-3", "instruct"]
+    },
+    {
+      "id": "Qwen/Qwen2.5-7B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.6,
+      "downloads": 1680000,
+      "tags": ["qwen2.5", "instruct"]
+    },
+    {
+      "id": "Qwen/Qwen2.5-14B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 14.8,
+      "downloads": 920000,
+      "tags": ["qwen2.5", "instruct"]
+    },
+    {
+      "id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "author": "mistralai",
+      "architecture": "MistralForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.2,
+      "downloads": 1350000,
+      "tags": ["mistral", "instruct"]
+    },
+    {
+      "id": "google/gemma-2-9b-it",
+      "author": "google",
+      "architecture": "Gemma2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 9.2,
+      "downloads": 980000,
+      "tags": ["gemma2", "instruct"]
+    },
+    {
+      "id": "microsoft/Phi-3.5-mini-instruct",
+      "author": "microsoft",
+      "architecture": "Phi3ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 3.8,
+      "downloads": 890000,
+      "tags": ["phi-3.5", "instruct"]
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "author": "deepseek-ai",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.6,
+      "downloads": 760000,
+      "tags": ["deepseek-r1", "reasoning"]
+    },
+    {
+      "id": "NousResearch/Hermes-2-Pro-Llama-3-8B",
+      "author": "NousResearch",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8,
+      "downloads": 690000,
+      "tags": ["llama-3", "function-calling"]
+    },
+    {
+      "id": "01-ai/Yi-1.5-9B-Chat",
+      "author": "01-ai",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8.8,
+      "downloads": 540000,
+      "tags": ["yi", "chat"]
+    }
+  ],
+  "multimodal": [
+    {
+      "id": "Qwen/Qwen2.5-VL-7B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2_5_VLForConditionalGeneration",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 8.3,
+      "downloads": 1150000,
+      "tags": ["qwen2.5-vl", "vision"]
+    },
+    {
+      "id": "Qwen/Qwen2-VL-7B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2VLForConditionalGeneration",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 8.3,
+      "downloads": 840000,
+      "tags": ["qwen2-vl", "vision"]
+    },
+    {
+      "id": "meta-llama/Llama-3.2-11B-Vision-Instruct",
+      "author": "meta-llama",
+      "architecture": "MllamaForConditionalGeneration",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 10.7,
+      "downloads": 790000,
+      "tags": ["llama-3.2", "vision"]
+    },
+    {
+      "id": "mistralai/Pixtral-12B-2409",
+      "author": "mistralai",
+      "architecture": "LlavaForConditionalGeneration",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 12.7,
+      "downloads": 420000,
+      "tags": ["pixtral", "vision"]
+    },
+    {
+      "id": "llava-hf/llava-1.5-7b-hf",
+      "author": "llava-hf",
+      "architecture": "LlavaForConditionalGeneration",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 7.1,
+      "downloads": 610000,
+      "tags": ["llava", "vision"]
+    },
+    {
+      "id": "microsoft/Phi-3.5-vision-instruct",
+      "author": "microsoft",
+      "architecture": "Phi3VForCausalLM",
+      "pipeline_tag": "image-text-to-text",
+      "parameters": 4.2,
+      "downloads": 480000,
+      "tags": ["phi-3.5", "vision"]
+    }
+  ],
+  "embedding": [
+    {
+      "id": "BAAI/bge-m3",
+      "author": "BAAI",
+      "architecture": "XLMRobertaModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.56,
+      "downloads": 2450000,
+      "tags": ["embedding", "multilingual"]
+    },
+    {
+      "id": "BAAI/bge-large-en-v1.5",
+      "author": "BAAI",
+      "architecture": "BertModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.34,
+      "downloads": 1950000,
+      "tags": ["embedding", "english"]
+    },
+    {
+      "id": "intfloat/e5-large-v2",
+      "author": "intfloat",
+      "architecture": "BertModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.34,
+      "downloads": 1320000,
+      "tags": ["embedding", "e5"]
+    },
+    {
+      "id": "intfloat/multilingual-e5-large",
+      "author": "intfloat",
+      "architecture": "XLMRobertaModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.56,
+      "downloads": 1180000,
+      "tags": ["embedding", "multilingual"]
+    },
+    {
+      "id": "nomic-ai/nomic-embed-text-v1.5",
+      "author": "nomic-ai",
+      "architecture": "NomicBertModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.14,
+      "downloads": 940000,
+      "tags": ["embedding", "long-context"]
+    },
+    {
+      "id": "Snowflake/snowflake-arctic-embed-l",
+      "author": "Snowflake",
+      "architecture": "BertModel",
+      "pipeline_tag": "feature-extraction",
+      "parameters": 0.34,
+      "downloads": 410000,
+      "tags": ["embedding", "retrieval"]
+    }
+  ],
+  "score": [
+    {
+      "id": "BAAI/bge-reranker-v2-m3",
+      "author": "BAAI",
+      "architecture": "XLMRobertaForSequenceClassification",
+      "pipeline_tag": "text-classification",
+      "parameters": 0.57,
+      "downloads": 1620000,
+      "tags": ["reranker", "multilingual"]
+    },
+    {
+      "id": "BAAI/bge-reranker-large",
+      "author": "BAAI",
+      "architecture": "XLMRobertaForSequenceClassification",
+      "pipeline_tag": "text-classification",
+      "parameters": 0.56,
+      "downloads": 980000,
+      "tags": ["reranker", "bge"]
+    },
+    {
+      "id": "BAAI/bge-reranker-base",
+      "author": "BAAI",
+      "architecture": "XLMRobertaForSequenceClassification",
+      "pipeline_tag": "text-classification",
+      "parameters": 0.28,
+      "downloads": 740000,
+      "tags": ["reranker", "lightweight"]
+    },
+    {
+      "id": "jinaai/jina-reranker-v2-base-multilingual",
+      "author": "jinaai",
+      "architecture": "XLMRobertaForSequenceClassification",
+      "pipeline_tag": "text-classification",
+      "parameters": 0.28,
+      "downloads": 510000,
+      "tags": ["reranker", "multilingual"]
+    }
+  ]
+}

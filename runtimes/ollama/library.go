@@ -1,39 +1,38 @@
 package ollama
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"orcn/assets"
 	"orcn/core"
 )
 
 const (
-	librarySearchURL = "https://ollama.com/search"
-	libraryCacheTTL  = 10 * time.Minute
-	libraryTimeout   = 20 * time.Second
-	libraryUserAgent = "orcn-gateway/1.0 (+model-search)"
+	libraryCacheTTL  = 30 * time.Minute
+	libraryTimeout   = 15 * time.Second
+	libraryUserAgent = "orcn-gateway/1.0 (+model-lookup)"
 	maxSearchResults = 50
 )
 
 type libraryModel struct {
-	Name string
-	Namespace   string
-	Description string
-	Tags       []string
-	Pulls      int
-	Parameters float64
+	Name        string   `json:"name"`
+	Namespace   string   `json:"namespace"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
+	Pulls       int      `json:"pulls"`
+	Parameters  float64  `json:"parameters"`
 }
 
 type libraryQuery struct {
-	filters []string
 	matchTags []string
 }
 
@@ -42,209 +41,90 @@ func taskLibraryQuery(task core.ModelTask) (libraryQuery, error) {
 	case core.TaskTextGeneration:
 		return libraryQuery{}, nil
 	case core.TaskEmbedding:
-		return libraryQuery{filters: []string{"embedding"}, matchTags: []string{"embedding"}}, nil
+		return libraryQuery{matchTags: []string{"embedding"}}, nil
 	case core.TaskMultimodal:
-		return libraryQuery{filters: []string{"vision"}, matchTags: []string{"vision"}}, nil
+		return libraryQuery{matchTags: []string{"vision"}}, nil
 	case core.TaskDecision:
-		return libraryQuery{filters: []string{"decision"}, matchTags: []string{"decision"}}, nil
+		return libraryQuery{matchTags: []string{"decision"}}, nil
 	default:
 		return libraryQuery{}, fmt.Errorf("ollama does not support task %q", task)
 	}
 }
 
-type libraryCacheEntry struct {
-	models    []libraryModel
+type libraryModelCacheEntry struct {
+	model     libraryModel
 	fetchedAt time.Time
 }
 
 var libraryCache = struct {
 	sync.Mutex
-	byQuery map[string]libraryCacheEntry
-	byName  map[string]libraryModel
-}{byQuery: make(map[string]libraryCacheEntry), byName: make(map[string]libraryModel)}
+	byName map[string]libraryModelCacheEntry
+}{byName: make(map[string]libraryModelCacheEntry)}
 
-// searchLibrary runs a live library search, consulting the cache first and
-func searchLibrary(query string, filters []string) ([]libraryModel, error) {
-	key := query + "\x00" + strings.Join(filters, ",")
+var libraryHTTP = &http.Client{Timeout: libraryTimeout}
 
-	libraryCache.Lock()
-	if entry, ok := libraryCache.byQuery[key]; ok && time.Since(entry.fetchedAt) < libraryCacheTTL {
-		models := entry.models
-		libraryCache.Unlock()
-		return models, nil
-	}
-	libraryCache.Unlock()
+var (
+	libraryCapRe     = regexp.MustCompile(`<span[^>]*bg-indigo-50[^>]*>([^<]+)</span>`)
+	librarySizeVal   = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*([bBmM])$`)
+	libraryTitleRe   = regexp.MustCompile(`<title>([^<]+)</title>`)
+	libraryMetaDesc  = regexp.MustCompile(`<meta\s+name="description"\s+content="([^"]*)"`)
+	libraryModelName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.\-/]*$`)
+)
 
-	models, err := fetchLibrarySearch(query, filters)
+// loadBootstrapModels reads the curated Ollama catalog from assets/ollama_bootstrap.json.
+func loadBootstrapModels(task core.ModelTask) ([]libraryModel, error) {
+	raw, err := assets.ReadFile("ollama_bootstrap.json")
 	if err != nil {
-		libraryCache.Lock()
-		defer libraryCache.Unlock()
-		if entry, ok := libraryCache.byQuery[key]; ok && len(entry.models) > 0 {
-			ollamaLog.Error("Ollama library unreachable, serving %d stale results for %q: %v", len(entry.models), query, err)
-			return entry.models, nil
+		return nil, fmt.Errorf("failed to read ollama bootstrap catalog: %w", err)
+	}
+	var catalog map[string][]libraryModel
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		return nil, fmt.Errorf("failed to parse ollama bootstrap catalog: %w", err)
+	}
+	if task == "" {
+		var all []libraryModel
+		seen := make(map[string]bool)
+		for _, list := range catalog {
+			for _, m := range list {
+				if !seen[m.Name] {
+					seen[m.Name] = true
+					all = append(all, m)
+				}
+			}
 		}
-		return nil, fmt.Errorf("ollama library search failed: %w", err)
+		return all, nil
 	}
+	return catalog[string(core.NormalizeModelTask(task))], nil
+}
 
-	libraryCache.Lock()
-	defer libraryCache.Unlock()
-	libraryCache.byQuery[key] = libraryCacheEntry{models: models, fetchedAt: time.Now()}
-	if len(libraryCache.byName) > 2000 {
-		libraryCache.byName = make(map[string]libraryModel)
+// findBootstrapModel finds an exact (or normalized bare-name) match in the bootstrap catalog.
+func findBootstrapModel(query string, task core.ModelTask) (libraryModel, bool) {
+	models, err := loadBootstrapModels(task)
+	if err != nil {
+		return libraryModel{}, false
 	}
+	qTrim := strings.TrimSpace(query)
+	hasTag := strings.Contains(qTrim, ":")
 	for _, m := range models {
-		libraryCache.byName[m.Name] = m
+		if strings.EqualFold(m.Name, qTrim) {
+			return m, true
+		}
+		if !hasTag && normalizeLibraryName(m.Name) == normalizeLibraryName(qTrim) {
+			return m, true
+		}
 	}
-	return models, nil
+	return libraryModel{}, false
 }
 
 // lookupLibraryModel returns a cached model by pullable name, or false.
 func lookupLibraryModel(name string) (libraryModel, bool) {
 	libraryCache.Lock()
 	defer libraryCache.Unlock()
-	m, ok := libraryCache.byName[name]
-	return m, ok
-}
-
-// --- HTTP fetch + parse ---
-
-var libraryHTTP = &http.Client{Timeout: libraryTimeout}
-
-func fetchLibrarySearch(query string, filters []string) ([]libraryModel, error) {
-	params := url.Values{}
-	params.Set("q", query)
-	for _, f := range filters {
-		params.Add("c", f)
-	}
-	req, err := http.NewRequest(http.MethodGet, librarySearchURL+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", libraryUserAgent)
-	req.Header.Set("Accept", "text/html")
-
-	resp, err := libraryHTTP.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status %s", resp.Status)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
-		return nil, err
-	}
-	return parseLibrarySearch(string(body)), nil
-}
-
-//parsing code
-var (
-	libraryCardRe  = regexp.MustCompile(`(?s)<li\s+class="flex items-baseline border-b[^"]*"[^>]*>(.*?)</li>`)
-	libraryLinkRe  = regexp.MustCompile(`<a\s+href="([^"]+)"`)
-	libraryDescRe  = regexp.MustCompile(`<p\s+class="max-w-lg[^"]*"[^>]*>([^<]*)</p>`)
-	libraryCapRe   = regexp.MustCompile(`<span[^>]*bg-indigo-50[^>]*>([^<]+)</span>`)
-	librarySizeRe  = regexp.MustCompile(`<span[^>]*ddf4ff[^>]*>([^<]+)</span>`)
-	libraryCloudRe = regexp.MustCompile(`<span[^>]*bg-cyan-50[^>]*>([^<]+)</span>`)
-	libraryPullRe  = regexp.MustCompile(`<span[^>]*>([\d,\.]+[KkMm]?)</span>\s*<span[^>]*>(?:&nbsp;|\s)*Pulls</span>`)
-	libraryTagsRe  = regexp.MustCompile(`<span[^>]*>(\d+)</span>\s*<span[^>]*>(?:&nbsp;|\s)*Tags?</span>`)
-	librarySizeVal = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*([bBmM])$`)
-
-	libraryTitleRe   = regexp.MustCompile(`<title>([^<]+)</title>`)
-	libraryMetaDesc  = regexp.MustCompile(`<meta\s+name="description"\s+content="([^"]*)"`)
-	libraryModelName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.\-/]*$`)
-)
-
-// libraryNonModelPaths are two-segment site paths that are pages, not models.
-var libraryNonModelPaths = map[string]bool{
-	"search": true, "docs": true, "pricing": true, "download": true,
-	"signin": true, "signup": true, "blog": true, "api": true,
-	"public": true, "cloud": true, "company": true,
-}
-
-func parseLibrarySearch(page string) []libraryModel {
-	models := make([]libraryModel, 0, 16)
-	for _, card := range libraryCardRe.FindAllStringSubmatch(page, -1) {
-		m, ok := parseLibraryCard(card[1])
-		if !ok {
-			continue
-		}
-		models = append(models, m)
-		if len(models) >= maxSearchResults {
-			break
-		}
-	}
-	return models
-}
-
-func parseLibraryCard(card string) (libraryModel, bool) {
-	link := libraryLinkRe.FindStringSubmatch(card)
-	if link == nil {
+	entry, ok := libraryCache.byName[strings.ToLower(name)]
+	if !ok || time.Since(entry.fetchedAt) >= libraryCacheTTL {
 		return libraryModel{}, false
 	}
-	namespace, name, ok := splitLibraryPath(link[1])
-	if !ok {
-		return libraryModel{}, false
-	}
-
-	// A `cloud` marker means the model is *also* on Ollama Cloud — but when it
-	cloud := false
-	for _, tag := range libraryCloudRe.FindAllStringSubmatch(card, -1) {
-		if strings.TrimSpace(strings.ToLower(tag[1])) == "cloud" {
-			cloud = true
-			break
-		}
-	}
-	if cloud {
-		if tm := libraryTagsRe.FindStringSubmatch(card); tm != nil {
-			if n, err := strconv.Atoi(tm[1]); err == nil && n <= 1 {
-				return libraryModel{}, false
-			}
-		}
-	}
-
-	var m libraryModel
-	m.Namespace = namespace
-	if namespace == "library" {
-		m.Name = name
-	} else {
-		m.Name = namespace + "/" + name
-	}
-	if dm := libraryDescRe.FindStringSubmatch(card); dm != nil {
-		m.Description = strings.TrimSpace(html.UnescapeString(dm[1]))
-	}
-	for _, tag := range libraryCapRe.FindAllStringSubmatch(card, -1) {
-		if t := strings.TrimSpace(strings.ToLower(html.UnescapeString(tag[1]))); t != "" {
-			m.Tags = append(m.Tags, t)
-		}
-	}
-	sizes := librarySizeRe.FindAllStringSubmatch(card, -1)
-	for i, sm := range sizes {
-		size := strings.TrimSpace(strings.ToLower(html.UnescapeString(sm[1])))
-		if size == "" {
-			continue
-		}
-		m.Tags = append(m.Tags, size)
-		if i == 0 {
-			m.Parameters = parseSizeTag(size)
-		}
-	}
-	if pm := libraryPullRe.FindStringSubmatch(card); pm != nil {
-		m.Pulls = parsePullCount(pm[1])
-	}
-	return m, true
-}
-
-func splitLibraryPath(href string) (namespace, name string, ok bool) {
-	href = strings.TrimSuffix(href, "/")
-	parts := strings.Split(strings.TrimPrefix(href, "/"), "/")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", false
-	}
-	if parts[0] != "library" && libraryNonModelPaths[strings.ToLower(parts[0])] {
-		return "", "", false
-	}
-	return parts[0], parts[1], true
+	return entry.model, true
 }
 
 func parseSizeTag(size string) float64 {
@@ -262,25 +142,6 @@ func parseSizeTag(size string) float64 {
 	return value
 }
 
-func parsePullCount(raw string) int {
-	s := strings.ReplaceAll(strings.TrimSpace(raw), ",", "")
-	mult := 1.0
-	if strings.HasSuffix(s, "K") || strings.HasSuffix(s, "k") {
-		mult = 1000
-		s = s[:len(s)-1]
-	} else if strings.HasSuffix(s, "M") || strings.HasSuffix(s, "m") {
-		mult = 1000000
-		s = s[:len(s)-1]
-	}
-	value, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
-	if err != nil {
-		return 0
-	}
-	return int(value * mult)
-}
-
-// --- query normalization + exact-match ranking ---
-
 // stripLibraryTag splits "gpt-oss:latest" into "gpt-oss". Registry names
 // never contain ":", so the first colon always starts the tag.
 func stripLibraryTag(query string) string {
@@ -291,8 +152,7 @@ func stripLibraryTag(query string) string {
 }
 
 // normalizeLibraryName canonicalizes a model name for comparison:
-// lowercase, no tag, hyphens/underscores/spaces ignored. Lets "gptoss"
-// equal "gpt-oss" and "gpt-oss:latest" equal "gpt-oss".
+// lowercase, no tag, hyphens/underscores/spaces ignored.
 func normalizeLibraryName(name string) string {
 	name = stripLibraryTag(strings.ToLower(name))
 	name = strings.ReplaceAll(name, "-", "")
@@ -300,58 +160,21 @@ func normalizeLibraryName(name string) string {
 	return strings.ReplaceAll(name, " ", "")
 }
 
-// looksLikeModelName reports whether the query could be a direct model
-// reference (single token, no spaces) worth probing in the library.
+// looksLikeModelName reports whether the query is a valid single-token model reference.
 func looksLikeModelName(base string) bool {
 	base = stripLibraryTag(base)
 	return base != "" && !strings.Contains(base, " ") && libraryModelName.MatchString(base)
 }
 
-// hasExactLibraryMatch reports whether any hit is exactly the requested
-// model (normalization-insensitive).
-func hasExactLibraryMatch(models []libraryModel, query string) bool {
-	want := normalizeLibraryName(query)
-	if want == "" {
-		return false
-	}
-	for _, m := range models {
-		if normalizeLibraryName(m.Name) == want {
-			return true
-		}
-	}
-	return false
-}
+// --- direct library probe (exact model page, no search scraping) ---
 
-// rankLibraryModels floats exact (normalization-insensitive) matches to the
-// top, preserving the library's relative order everywhere else. This keeps
-// the official family above forks when the user names it directly.
-func rankLibraryModels(models []libraryModel, query string) []libraryModel {
-	want := normalizeLibraryName(query)
-	if want == "" {
-		return models
-	}
-	exact := make([]libraryModel, 0, len(models))
-	rest := make([]libraryModel, 0, len(models))
-	for _, m := range models {
-		if normalizeLibraryName(m.Name) == want {
-			exact = append(exact, m)
-		} else {
-			rest = append(rest, m)
-		}
-	}
-	return append(exact, rest...)
-}
-
-// --- direct library probe ---
-//
-// When search misses the exact model (bad relevance, brand-new release),
-// fetch its library page directly: /library/<name> or /<ns>/<name>.
-// Model pages are server-rendered and carry <title>, meta description and
-// :tag variant links — enough to build a deployable hit.
-
-// probeLibraryModel fetches and parses a library model page. It returns
-// false when the page does not exist or offers no pullable (non-cloud) tag.
+// probeLibraryModel fetches and parses a specific Ollama library model page
+// (/library/<name> or /<ns>/<name>). Returns false if not found or cloud-only.
 func probeLibraryModel(base string) (libraryModel, bool) {
+	if cached, ok := lookupLibraryModel(base); ok {
+		return cached, true
+	}
+
 	pagePath := base
 	if !strings.Contains(base, "/") {
 		pagePath = "library/" + base
@@ -378,13 +201,14 @@ func probeLibraryModel(base string) (libraryModel, bool) {
 	if !ok {
 		return libraryModel{}, false
 	}
+	now := time.Now()
 	libraryCache.Lock()
 	defer libraryCache.Unlock()
 	if len(libraryCache.byName) > 2000 {
-		libraryCache.byName = make(map[string]libraryModel)
+		libraryCache.byName = make(map[string]libraryModelCacheEntry)
 	}
-	libraryCache.byName[m.Name] = m
-	libraryCache.byName[base] = m
+	libraryCache.byName[strings.ToLower(m.Name)] = libraryModelCacheEntry{model: m, fetchedAt: now}
+	libraryCache.byName[strings.ToLower(base)] = libraryModelCacheEntry{model: m, fetchedAt: now}
 	return m, true
 }
 
@@ -414,7 +238,6 @@ func parseLibraryModelPage(page, want, pagePath string) (libraryModel, bool) {
 	}
 
 	// Pullable variants: /<pagePath>:<tag> links excluding *-cloud ones.
-	// No local variant => cloud-only => not deployable via `ollama pull`.
 	variantRe := regexp.MustCompile(`href="/` + regexp.QuoteMeta(pagePath) + `:([^"/]+)"`)
 	seen := make(map[string]bool)
 	var order []string
@@ -438,9 +261,6 @@ func parseLibraryModelPage(page, want, pagePath string) (libraryModel, bool) {
 	if len(order) == 0 {
 		return libraryModel{}, false
 	}
-	// The returned name must work with `ollama pull <name>`: bare names
-	// resolve to :latest, so only keep the name bare when :latest exists;
-	// otherwise pin the smallest concrete variant.
 	hasLatest := false
 	for _, v := range order {
 		if strings.EqualFold(v, "latest") {
@@ -456,14 +276,12 @@ func parseLibraryModelPage(page, want, pagePath string) (libraryModel, bool) {
 			m.Name = want + ":" + order[0]
 		}
 	}
-	// Capability tags shown on the model page (same indigo chips).
 	for _, tag := range libraryCapRe.FindAllStringSubmatch(page, -1) {
 		if t := strings.TrimSpace(strings.ToLower(html.UnescapeString(tag[1]))); t != "" {
 			m.Tags = append(m.Tags, t)
 		}
 	}
 	m.Tags = append(m.Tags, sizes...)
-	// Smallest variant as the parameter estimate (matches the default pull).
 	m.Parameters = smallestVal
 	return m, true
 }
@@ -486,7 +304,6 @@ func hasAllTags(modelTags []string, required []string) bool {
 }
 
 // hasAnyTag reports whether the model carries at least one of the tags.
-// Empty matchTags accepts everything.
 func hasAnyTag(modelTags []string, matchTags []string) bool {
 	if len(matchTags) == 0 {
 		return true

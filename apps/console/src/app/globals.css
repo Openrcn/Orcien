@@ -244,19 +244,23 @@
 }
 
 /* Custom Scrollbar for sleekness */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--fg) / 0.14) transparent;
+}
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 10px;
+  background: rgb(var(--fg) / 0.14);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: rgb(var(--fg) / 0.28);
 }
 
 @theme inline {

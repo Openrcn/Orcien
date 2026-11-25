@@ -1,0 +1,266 @@
+{
+  "text-generation": [
+    {
+      "name": "llama3.2",
+      "namespace": "library",
+      "description": "Meta's lightweight 3B Llama 3.2 model, fast for local and edge chat.",
+      "parameters": 3,
+      "pulls": 24500000,
+      "tags": ["tools", "3b"]
+    },
+    {
+      "name": "llama3.1:8b",
+      "namespace": "library",
+      "description": "Meta's Llama 3.1 8B instruct model with 128K context and tool calling.",
+      "parameters": 8,
+      "pulls": 38000000,
+      "tags": ["tools", "8b"]
+    },
+    {
+      "name": "qwen3:8b",
+      "namespace": "library",
+      "description": "Alibaba's Qwen3 8B model with thinking and tool-calling support.",
+      "parameters": 8,
+      "pulls": 11200000,
+      "tags": ["tools", "thinking", "8b"]
+    },
+    {
+      "name": "qwen2.5:7b",
+      "namespace": "library",
+      "description": "Qwen2.5 7B instruction-tuned model strong in coding, math, and JSON.",
+      "parameters": 7.6,
+      "pulls": 19500000,
+      "tags": ["tools", "7b"]
+    },
+    {
+      "name": "qwen2.5-coder:7b",
+      "namespace": "library",
+      "description": "Code-specialized Qwen2.5 7B model for generation and refactoring.",
+      "parameters": 7.6,
+      "pulls": 8400000,
+      "tags": ["tools", "7b"]
+    },
+    {
+      "name": "deepseek-r1:8b",
+      "namespace": "library",
+      "description": "DeepSeek-R1 8B distilled reasoning model with step-by-step thinking.",
+      "parameters": 8,
+      "pulls": 29000000,
+      "tags": ["thinking", "8b"]
+    },
+    {
+      "name": "gemma3:4b",
+      "namespace": "library",
+      "description": "Google's Gemma 3 4B model with multimodal vision and 128K context.",
+      "parameters": 4,
+      "pulls": 12400000,
+      "tags": ["vision", "4b"]
+    },
+    {
+      "name": "gemma2:9b",
+      "namespace": "library",
+      "description": "Google's Gemma 2 9B general-purpose chat and instruction model.",
+      "parameters": 9,
+      "pulls": 14800000,
+      "tags": ["9b"]
+    },
+    {
+      "name": "mistral",
+      "namespace": "library",
+      "description": "Mistral 7B v0.3 instruct model with function-calling support.",
+      "parameters": 7.2,
+      "pulls": 22000000,
+      "tags": ["tools", "7b"]
+    },
+    {
+      "name": "phi4",
+      "namespace": "library",
+      "description": "Microsoft's Phi-4 14B model optimized for reasoning and STEM tasks.",
+      "parameters": 14,
+      "pulls": 6100000,
+      "tags": ["14b"]
+    },
+    {
+      "name": "phi3.5",
+      "namespace": "library",
+      "description": "Microsoft's Phi-3.5 mini 3.8B lightweight instruct model.",
+      "parameters": 3.8,
+      "pulls": 4800000,
+      "tags": ["3.8b"]
+    },
+    {
+      "name": "codellama:7b",
+      "namespace": "library",
+      "description": "Meta's Code Llama 7B model for code synthesis and infilling.",
+      "parameters": 7,
+      "pulls": 11500000,
+      "tags": ["7b"]
+    },
+    {
+      "name": "smollm2:1.7b",
+      "namespace": "library",
+      "description": "Hugging Face's compact 1.7B model for ultra-fast lightweight tasks.",
+      "parameters": 1.7,
+      "pulls": 2300000,
+      "tags": ["tools", "1.7b"]
+    },
+    {
+      "name": "command-r7b",
+      "namespace": "library",
+      "description": "Cohere's 7B enterprise model built for RAG and tool use.",
+      "parameters": 7,
+      "pulls": 1400000,
+      "tags": ["tools", "7b"]
+    },
+    {
+      "name": "granite3.2:8b",
+      "namespace": "library",
+      "description": "IBM's Granite 3.2 8B model with thinking and tool-calling support.",
+      "parameters": 8,
+      "pulls": 1100000,
+      "tags": ["tools", "thinking", "8b"]
+    },
+    {
+      "name": "olmo2:7b",
+      "namespace": "library",
+      "description": "AllenAI's fully open OLMo 2 7B language model.",
+      "parameters": 7,
+      "pulls": 520000,
+      "tags": ["7b"]
+    }
+  ],
+  "multimodal": [
+    {
+      "name": "qwen2.5vl:7b",
+      "namespace": "library",
+      "description": "Qwen2.5-VL 7B vision-language model for document, chart, and image understanding.",
+      "parameters": 7,
+      "pulls": 4600000,
+      "tags": ["vision", "7b"]
+    },
+    {
+      "name": "llama3.2-vision",
+      "namespace": "library",
+      "description": "Meta's Llama 3.2 11B Vision model for image reasoning and OCR.",
+      "parameters": 11,
+      "pulls": 7800000,
+      "tags": ["vision", "11b"]
+    },
+    {
+      "name": "gemma3:4b",
+      "namespace": "library",
+      "description": "Google's Gemma 3 4B multimodal model supporting text and image inputs.",
+      "parameters": 4,
+      "pulls": 12400000,
+      "tags": ["vision", "4b"]
+    },
+    {
+      "name": "gemma3:12b",
+      "namespace": "library",
+      "description": "Google's Gemma 3 12B multimodal model with higher visual accuracy.",
+      "parameters": 12,
+      "pulls": 5300000,
+      "tags": ["vision", "12b"]
+    },
+    {
+      "name": "llava",
+      "namespace": "library",
+      "description": "Classic LLaVA 7B vision-language assistant.",
+      "parameters": 7,
+      "pulls": 10900000,
+      "tags": ["vision", "7b"]
+    },
+    {
+      "name": "llava-llama3",
+      "namespace": "library",
+      "description": "LLaVA fine-tuned on Llama 3 8B for improved visual chat.",
+      "parameters": 8,
+      "pulls": 2100000,
+      "tags": ["vision", "8b"]
+    },
+    {
+      "name": "minicpm-v",
+      "namespace": "library",
+      "description": "Efficient 8B multimodal model for OCR and multi-image understanding.",
+      "parameters": 8,
+      "pulls": 3400000,
+      "tags": ["vision", "8b"]
+    },
+    {
+      "name": "moondream",
+      "namespace": "library",
+      "description": "Tiny 1.8B vision-language model designed for fast edge inference.",
+      "parameters": 1.8,
+      "pulls": 2800000,
+      "tags": ["vision", "1.8b"]
+    }
+  ],
+  "embedding": [
+    {
+      "name": "nomic-embed-text",
+      "namespace": "library",
+      "description": "High-performing open embedding model with an 8K context window.",
+      "parameters": 0.137,
+      "pulls": 34000000,
+      "tags": ["embedding", "137m"]
+    },
+    {
+      "name": "mxbai-embed-large",
+      "namespace": "library",
+      "description": "Mixedbread AI's state-of-the-art large English embedding model.",
+      "parameters": 0.335,
+      "pulls": 11200000,
+      "tags": ["embedding", "335m"]
+    },
+    {
+      "name": "bge-m3",
+      "namespace": "library",
+      "description": "BAAI's multi-lingual, multi-granularity embedding model.",
+      "parameters": 0.567,
+      "pulls": 6900000,
+      "tags": ["embedding", "567m"]
+    },
+    {
+      "name": "bge-large",
+      "namespace": "library",
+      "description": "BAAI's large English text embedding model for retrieval and RAG.",
+      "parameters": 0.335,
+      "pulls": 2400000,
+      "tags": ["embedding", "335m"]
+    },
+    {
+      "name": "snowflake-arctic-embed",
+      "namespace": "library",
+      "description": "Snowflake's Arctic text embedding model tuned for enterprise search.",
+      "parameters": 0.335,
+      "pulls": 1900000,
+      "tags": ["embedding", "335m"]
+    },
+    {
+      "name": "all-minilm",
+      "namespace": "library",
+      "description": "Ultra-fast 23M sentence embedding model for low-latency semantic search.",
+      "parameters": 0.023,
+      "pulls": 5200000,
+      "tags": ["embedding", "23m"]
+    }
+  ],
+  "decision": [
+    {
+      "name": "bespoke-minicheck",
+      "namespace": "library",
+      "description": "7B fact-checking and groundedness decision model.",
+      "parameters": 7,
+      "pulls": 480000,
+      "tags": ["decision", "7b"]
+    },
+    {
+      "name": "nimble",
+      "namespace": "library",
+      "description": "9B structured decision and classification model from Bespoke Labs.",
+      "parameters": 9,
+      "pulls": 21600,
+      "tags": ["tools", "decision", "9b"]
+    }
+  ]
+}

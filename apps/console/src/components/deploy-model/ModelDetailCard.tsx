@@ -16,6 +16,7 @@ import {
 
 interface ModelDetailCardProps {
   modelId: string;
+  modelSource?: string;
   modelDetails: ModelDetails | null;
   taskLabel?: string;
   requiredVram: number;
@@ -26,6 +27,7 @@ interface ModelDetailCardProps {
 /* Kit content block shown inline inside the expanded model row. */
 export function ModelDetailCard({
   modelId,
+  modelSource = "huggingface",
   modelDetails,
   taskLabel,
   requiredVram,
@@ -99,6 +101,20 @@ export function ModelDetailCard({
     ["Framework", String(modelDetails?.library_name || "—")],
   ];
 
+  const ollamaBase = modelId.split(":")[0]?.trim() || modelId;
+  const externalLink =
+    modelSource === "ollama"
+      ? {
+          href: `https://ollama.com/${ollamaBase.includes("/") ? ollamaBase : `library/${ollamaBase}`}`,
+          label: "View on Ollama Registry",
+        }
+      : modelSource === "huggingface"
+        ? {
+            href: `https://huggingface.co/${modelId}`,
+            label: "View on Hugging Face",
+          }
+        : null;
+
   return (
     <div className="grid gap-4">
       {/* Description + external links */}
@@ -106,16 +122,38 @@ export function ModelDetailCard({
         <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-mut2">
           {description}
         </p>
-        <a
-          href={`https://huggingface.co/${modelId}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex flex-none items-center gap-1.5 text-[12.5px] font-medium text-accent-t transition hover:brightness-110"
-        >
-          View on Hugging Face
-          <ExternalLink className="size-3.5" strokeWidth={1.7} />
-        </a>
+        {externalLink && (
+          <a
+            href={externalLink.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex flex-none items-center gap-1.5 text-[12.5px] font-medium text-accent-t transition hover:brightness-110"
+          >
+            {externalLink.label}
+            <ExternalLink className="size-3.5" strokeWidth={1.7} />
+          </a>
+        )}
       </div>
+
+      {/* Gated token */}
+      {modelDetails?.gated && (
+        <div className="rounded-xl border border-warn/25 bg-warn/[0.04] px-3.5 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-fg">
+              <KeyRound className="size-3.5 text-warn" strokeWidth={1.7} />
+              Hugging Face token required
+            </span>
+            <span className="text-[11px] text-mut">Gated model</span>
+          </div>
+          <Input
+            type="password"
+            placeholder="hf_…"
+            value={hfToken}
+            onChange={(e) => onHfTokenChange(e.target.value)}
+            className="h-9 bg-card font-mono text-[12.5px]"
+          />
+        </div>
+      )}
 
       {/* Quick specs strip */}
       <div className="grid grid-cols-2 gap-4 rounded-xl border border-line bg-card p-4 sm:grid-cols-5">
@@ -152,23 +190,6 @@ export function ModelDetailCard({
               {t}
             </span>
           ))}
-        </div>
-      )}
-
-      {/* Gated token */}
-      {modelDetails?.gated && (
-        <div className="rounded-xl border border-warn/25 bg-warn/10 p-3.5">
-          <div className="mb-2 flex items-center gap-2 text-[12.5px] font-semibold text-warn">
-            <KeyRound className="size-3.5" strokeWidth={1.7} />
-            Gated model — Hugging Face token required
-          </div>
-          <Input
-            type="password"
-            placeholder="hf_…"
-            value={hfToken}
-            onChange={(e) => onHfTokenChange(e.target.value)}
-            className="font-mono text-[13px]"
-          />
         </div>
       )}
     </div>

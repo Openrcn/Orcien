@@ -1,6 +1,7 @@
 package vllm
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
+	"orcn/assets"
 	"orcn/core"
 )
 
@@ -225,8 +229,128 @@ func modelMaxLength(config map[string]any) int {
 	return 0
 }
 
+const (
+	hfSearchCacheTTL    = 30 * time.Minute
+	hfBootstrapCacheTTL = 1 * time.Hour
+)
+
+type vllmBootstrapEntry struct {
+	ID           string   `json:"id"`
+	Author       string   `json:"author"`
+	Architecture string   `json:"architecture"`
+	PipelineTag  string   `json:"pipeline_tag"`
+	Parameters   float64  `json:"parameters"`
+	Downloads    int      `json:"downloads"`
+	Tags         []string `json:"tags"`
+}
+
+type hfSearchCacheEntry struct {
+	models    []hfModelSearchResult
+	fetchedAt time.Time
+}
+
+type hfBootstrapCacheEntry struct {
+	models    []core.ModelInfo
+	fetchedAt time.Time
+}
+
+var hfCache = struct {
+	sync.Mutex
+	search    map[string]hfSearchCacheEntry
+	bootstrap map[core.ModelTask]hfBootstrapCacheEntry
+}{
+	search:    make(map[string]hfSearchCacheEntry),
+	bootstrap: make(map[core.ModelTask]hfBootstrapCacheEntry),
+}
+
+func loadVLLMBootstrap(task core.ModelTask) ([]core.ModelInfo, error) {
+	hfCache.Lock()
+	if entry, ok := hfCache.bootstrap[task]; ok && time.Since(entry.fetchedAt) < hfBootstrapCacheTTL {
+		out := append([]core.ModelInfo(nil), entry.models...)
+		hfCache.Unlock()
+		return out, nil
+	}
+	hfCache.Unlock()
+
+	raw, err := assets.ReadFile("vllm_bootstrap.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read vllm bootstrap catalog: %w", err)
+	}
+	var catalog map[string][]vllmBootstrapEntry
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		return nil, fmt.Errorf("failed to parse vllm bootstrap catalog: %w", err)
+	}
+
+	entries := catalog[string(task)]
+	models := make([]core.ModelInfo, 0, len(entries))
+	for _, e := range entries {
+		tags := append([]string(nil), e.Tags...)
+		if e.Architecture != "" {
+			tags = append([]string{e.Architecture}, tags...)
+		}
+		models = append(models, core.ModelInfo{
+			ID:           e.ID,
+			Name:         e.ID,
+			Author:       e.Author,
+			Architecture: e.Architecture,
+			Downloads:    e.Downloads,
+			PipelineTag:  e.PipelineTag,
+			Tags:         tags,
+			Task:         string(task),
+			Parameters:   e.Parameters,
+		})
+	}
+
+	// Best-effort concurrent HF stats enrichment with a short timeout so
+	// bootstrap never blocks when offline or rate-limited.
+	ctx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+	defer cancel()
+	var wg sync.WaitGroup
+	for i := range models {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, "https://huggingface.co/api/models/"+models[idx].ID, nil)
+			if reqErr != nil {
+				return
+			}
+			resp, respErr := http.DefaultClient.Do(req)
+			if respErr != nil || resp.StatusCode != http.StatusOK {
+				if resp != nil {
+					resp.Body.Close()
+				}
+				return
+			}
+			defer resp.Body.Close()
+			var info struct {
+				Downloads   int `json:"downloads"`
+				Safetensors struct {
+					Total int64 `json:"total"`
+				} `json:"safetensors"`
+			}
+			if decErr := json.NewDecoder(resp.Body).Decode(&info); decErr == nil {
+				if info.Downloads > 0 {
+					models[idx].Downloads = info.Downloads
+				}
+				if info.Safetensors.Total > 0 {
+					models[idx].Parameters = float64(info.Safetensors.Total) / 1e9
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	hfCache.Lock()
+	hfCache.bootstrap[task] = hfBootstrapCacheEntry{models: append([]core.ModelInfo(nil), models...), fetchedAt: time.Now()}
+	hfCache.Unlock()
+	return models, nil
+}
+
 func (v *VLLMRuntime) SearchModels(query string, task core.ModelTask, _ []string) ([]core.ModelInfo, error) {
 	task = normalizeTask(task)
+	if strings.TrimSpace(query) == "" {
+		return loadVLLMBootstrap(task)
+	}
 	pipelineTags, architectures, err := taskSearchConfig(task)
 	if err != nil {
 		return nil, err
@@ -267,6 +391,15 @@ func (v *VLLMRuntime) SearchModels(query string, task core.ModelTask, _ []string
 }
 
 func searchHuggingFaceModels(query, pipelineTag string) ([]hfModelSearchResult, error) {
+	cacheKey := query + "\x00" + pipelineTag
+	hfCache.Lock()
+	if entry, ok := hfCache.search[cacheKey]; ok && time.Since(entry.fetchedAt) < hfSearchCacheTTL {
+		out := entry.models
+		hfCache.Unlock()
+		return out, nil
+	}
+	hfCache.Unlock()
+
 	searchURL := fmt.Sprintf("https://huggingface.co/api/models?search=%s&limit=100&sort=downloads&direction=-1&pipeline_tag=%s&expand=config&expand=safetensors", url.QueryEscape(query), url.QueryEscape(pipelineTag))
 	resp, err := http.Get(searchURL)
 	if err != nil {
@@ -281,6 +414,13 @@ func searchHuggingFaceModels(query, pipelineTag string) ([]hfModelSearchResult, 
 	if err := json.NewDecoder(resp.Body).Decode(&models); err != nil {
 		return nil, err
 	}
+
+	hfCache.Lock()
+	if len(hfCache.search) > 500 {
+		hfCache.search = make(map[string]hfSearchCacheEntry)
+	}
+	hfCache.search[cacheKey] = hfSearchCacheEntry{models: models, fetchedAt: time.Now()}
+	hfCache.Unlock()
 	return models, nil
 }
 

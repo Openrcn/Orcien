@@ -24,7 +24,7 @@ type OllamaModelDetails struct {
 type OllamaRuntime struct{}
 
 func New() *OllamaRuntime {
-	ollamaLog.Info("Ollama runtime ready (live library search, no vendored registry).")
+	ollamaLog.Info("Ollama runtime ready (curated bootstrap + exact model lookup).")
 	return &OllamaRuntime{}
 }
 
@@ -33,6 +33,8 @@ func (v *OllamaRuntime) GetWorkloadType() string {
 }
 
 func (v *OllamaRuntime) Name() string { return "Ollama" }
+
+func (v *OllamaRuntime) ModelSource() string { return "ollama" }
 
 func (v *OllamaRuntime) SupportedTasks() []core.ModelTask {
 	return []core.ModelTask{
@@ -107,6 +109,20 @@ func (v *OllamaRuntime) BuildJobSpec(modelID string, task core.ModelTask, advanc
 	}, nil
 }
 
+func toCoreModelInfo(m libraryModel, task core.ModelTask) core.ModelInfo {
+	return core.ModelInfo{
+		ID:           m.Name,
+		Name:         m.Name,
+		Author:       libraryAuthor(m),
+		Architecture: libraryFamily(m),
+		Downloads:    m.Pulls,
+		PipelineTag:  string(task),
+		Tags:         m.Tags,
+		Task:         string(task),
+		Parameters:   m.Parameters,
+	}
+}
+
 func (v *OllamaRuntime) SearchModels(query string, task core.ModelTask, capabilities []string) ([]core.ModelInfo, error) {
 	task = core.NormalizeModelTask(task)
 	lq, err := taskLibraryQuery(task)
@@ -114,58 +130,55 @@ func (v *OllamaRuntime) SearchModels(query string, task core.ModelTask, capabili
 		return nil, err
 	}
 	caps := core.NormalizeCapabilities(capabilities)
+	trimmed := strings.TrimSpace(query)
 
-	base := stripLibraryTag(query)
-	models, err := searchLibrary(base, lq.filters)
-	if err != nil {
-		return nil, err
-	}
-
-	results := make([]core.ModelInfo, 0, len(models))
-	parsed := make([]libraryModel, 0, len(models))
-	for _, m := range models {
-		if !hasAnyTag(m.Tags, lq.matchTags) || !hasAllTags(m.Tags, caps) {
-			continue
+	// Empty query -> return curated bootstrap models for this task & capabilities.
+	if trimmed == "" {
+		bootstrap, err := loadBootstrapModels(task)
+		if err != nil {
+			return nil, err
 		}
-		parsed = append(parsed, m)
+		results := make([]core.ModelInfo, 0, len(bootstrap))
+		for _, m := range bootstrap {
+			if !hasAnyTag(m.Tags, lq.matchTags) || !hasAllTags(m.Tags, caps) {
+				continue
+			}
+			results = append(results, toCoreModelInfo(m, task))
+			if len(results) >= maxSearchResults {
+				break
+			}
+		}
+		return results, nil
 	}
 
-	parsed = rankLibraryModels(parsed, query)
+	// Non-empty query -> exact match only (bootstrap catalog first, then direct model page probe).
+	if m, ok := findBootstrapModel(trimmed, task); ok &&
+		hasAnyTag(m.Tags, lq.matchTags) && hasAllTags(m.Tags, caps) {
+		return []core.ModelInfo{toCoreModelInfo(m, task)}, nil
+	}
 
-	// Search missed it entirely (bad relevance, brand-new release): probe
-	// the library page for the exact name as a last resort. The probe must
-	// pass the same strict task tag check — no pipeline leaks.
-	if !hasExactLibraryMatch(parsed, query) && looksLikeModelName(base) {
-		if pm, ok := probeLibraryModel(base); ok &&
-			hasAnyTag(pm.Tags, lq.matchTags) && hasAllTags(pm.Tags, caps) {
-			parsed = append([]libraryModel{pm}, parsed...)
-		}
+	base := stripLibraryTag(trimmed)
+	if !looksLikeModelName(base) {
+		return []core.ModelInfo{}, nil
 	}
-	for _, m := range parsed {
-		results = append(results, core.ModelInfo{
-			ID:           m.Name,
-			Name:         m.Name,
-			Author:       libraryAuthor(m),
-			Architecture: libraryFamily(m),
-			Downloads:    m.Pulls,
-			PipelineTag:  string(task),
-			Tags:         m.Tags,
-			Task:         string(task),
-			Parameters:   m.Parameters,
-		})
-		if len(results) >= maxSearchResults {
-			break
+
+	if pm, ok := probeLibraryModel(base); ok &&
+		hasAnyTag(pm.Tags, lq.matchTags) && hasAllTags(pm.Tags, caps) {
+		// Preserve an explicit user-supplied tag (e.g. qwen2.5:14b).
+		if strings.Contains(trimmed, ":") {
+			pm.Name = trimmed
 		}
+		return []core.ModelInfo{toCoreModelInfo(pm, task)}, nil
 	}
-	return results, nil
+	return []core.ModelInfo{}, nil
 }
 
-func (v *OllamaRuntime) GetModelDetails(modelID string, _ core.ModelTask) (interface{}, error) {
-	base := modelID
-	if i := strings.Index(base, ":"); i >= 0 {
-		base = base[:i]
+func (v *OllamaRuntime) GetModelDetails(modelID string, task core.ModelTask) (interface{}, error) {
+	trimmed := strings.TrimSpace(modelID)
+	if trimmed == "" {
+		return nil, errors.New("missing model name")
 	}
-	base = strings.TrimSpace(base)
+	base := stripLibraryTag(trimmed)
 	if base == "" {
 		return nil, errors.New("missing model name")
 	}
@@ -173,16 +186,18 @@ func (v *OllamaRuntime) GetModelDetails(modelID string, _ core.ModelTask) (inter
 	if m, ok := lookupLibraryModel(base); ok {
 		return libraryDetails(m), nil
 	}
-	models, err := searchLibrary(base, nil)
-	if err != nil {
-		return nil, err
+	if m, ok := findBootstrapModel(trimmed, task); ok {
+		return libraryDetails(m), nil
 	}
-	for _, m := range models {
-		if strings.EqualFold(m.Name, base) {
+	if m, ok := findBootstrapModel(trimmed, ""); ok {
+		return libraryDetails(m), nil
+	}
+	if looksLikeModelName(base) {
+		if m, ok := probeLibraryModel(base); ok {
 			return libraryDetails(m), nil
 		}
 	}
-	return nil, errors.New("model not found in ollama library; search for the exact library name")
+	return nil, errors.New("model not found in ollama library; enter the exact library name")
 }
 
 func libraryAuthor(m libraryModel) string {

@@ -39,44 +39,26 @@ interface DeployModelData {
   advanced_config: Record<string, string>;
 }
 
-/* Curated vLLM text-generation suggestions — shown on first load so Step 1
-   is never an empty white wall. Kept in sync with HF popularity; each
-   entry renders as a normal ModelItem so downstream selection logic just
-   works. Strings/numbers deliberately mirror the /models/search payload. */
-const CURATED_VLLM_IDS: Array<{
-  id: string;
-  author: string;
-  downloads: number;
-  likes: number;
-  parameters: number;
-  pipelineTag: string;
-  tags: string[];
-}> = [
-  { id: "meta-llama/Meta-Llama-3-8B-Instruct", author: "meta-llama", downloads: 2840000, likes: 4820, parameters: 8, pipelineTag: "text-generation", tags: ["llama", "instruct"] },
-  { id: "meta-llama/Meta-Llama-3.1-8B-Instruct", author: "meta-llama", downloads: 2190000, likes: 3950, parameters: 8, pipelineTag: "text-generation", tags: ["llama-3.1", "instruct"] },
-  { id: "Qwen/Qwen2.5-7B-Instruct", author: "Qwen", downloads: 1680000, likes: 3120, parameters: 7, pipelineTag: "text-generation", tags: ["qwen2", "instruct"] },
-  { id: "Qwen/Qwen2-7B-Instruct", author: "Qwen", downloads: 1420000, likes: 2890, parameters: 7, pipelineTag: "text-generation", tags: ["qwen2", "instruct"] },
-  { id: "mistralai/Mistral-7B-Instruct-v0.2", author: "mistralai", downloads: 1350000, likes: 2670, parameters: 7, pipelineTag: "text-generation", tags: ["mistral", "instruct"] },
-  { id: "google/gemma-2-9b-it", author: "google", downloads: 980000, likes: 2210, parameters: 9, pipelineTag: "text-generation", tags: ["gemma2", "instruct"] },
-  { id: "microsoft/Phi-3-mini-4k-instruct", author: "microsoft", downloads: 1120000, likes: 1980, parameters: 3.8, pipelineTag: "text-generation", tags: ["phi-3", "instruct"] },
-  { id: "01-ai/Yi-1.5-9B-Chat", author: "01-ai", downloads: 740000, likes: 1640, parameters: 9, pipelineTag: "text-generation", tags: ["yi", "chat"] },
-  { id: "NousResearch/Hermes-2-Pro-Llama-3-8B", author: "NousResearch", downloads: 690000, likes: 1520, parameters: 8, pipelineTag: "text-generation", tags: ["llama-3", "function-calling"] },
-  { id: "deepseek-ai/deepseek-llm-7b-chat", author: "deepseek-ai", downloads: 620000, likes: 1370, parameters: 7, pipelineTag: "text-generation", tags: ["deepseek", "chat"] },
-  { id: "upstage/SOLAR-10.7B-Instruct-v1.0", author: "upstage", downloads: 540000, likes: 1210, parameters: 10.7, pipelineTag: "text-generation", tags: ["solar", "instruct"] },
-];
-
-function buildCuratedVllmItems(): ModelItem[] {
-  return CURATED_VLLM_IDS.map((r) => ({
-    id: r.id,
-    name: r.id.split("/").pop() || r.id,
-    org: r.author,
-    downloads: r.downloads,
-    likes: r.likes,
-    parameters: r.parameters,
-    vram: `~${Math.ceil(estimateSearchVram(r.id, r.parameters))} GB`,
-    tags: r.tags,
-    pipelineTag: r.pipelineTag,
-  }));
+function mapSearchResults(results: ModelSearchApiResult[]): ModelItem[] {
+  return results.map((r) => {
+    const params =
+      typeof r.Parameters === "number" && r.Parameters > 0
+        ? r.Parameters
+        : undefined;
+    return {
+      id: r.ID,
+      name: r.ID.split("/").pop() || r.ID,
+      org: r.Author || r.ID.split("/")[0] || "model",
+      downloads: r.Downloads,
+      likes: r.Likes,
+      parameters: params,
+      vram: params
+        ? `~${Math.ceil(estimateSearchVram(r.ID, params))} GB`
+        : undefined,
+      tags: Array.isArray(r.Tags) ? r.Tags : [],
+      pipelineTag: r.PipelineTag,
+    };
+  });
 }
 
 function applyDetectedParsers(
@@ -314,13 +296,6 @@ export function useDeployModel() {
           chosenModality = modality;
           return { ...d, modality, runtime };
         });
-        // Default catalogue: vLLM text-generation gets ~11 featured models so the
-        // drawer never renders as a blank empty state.
-        if (!fromCatalog) {
-          if (chosenRuntime === "vllm" && chosenModality === "text-generation") {
-            setSearchResults(buildCuratedVllmItems());
-          }
-        }
         if (fromCatalog && preselectedModel) {
           setIsPreselected(true);
           setStep(2);
@@ -413,43 +388,67 @@ export function useDeployModel() {
     [data.advanced_config, data.modality, modelDetails, advancedSchema],
   );
 
+  // Fetch bootstrap or filtered models from backend whenever (runtime, modality, capabilities) changes.
+  useEffect(() => {
+    if (!data.runtime || !data.modality) {
+      setSearchResults([]);
+      return;
+    }
+    let cancelled = false;
+    setIsSearching(true);
+    const caps =
+      capabilities.length > 0
+        ? `&capabilities=${encodeURIComponent(capabilities.join(","))}`
+        : "";
+    const q = searchQuery.trim()
+      ? `&q=${encodeURIComponent(searchQuery.trim())}`
+      : "";
+    fetch(
+      `/api/v1/models/search?runtime=${encodeURIComponent(data.runtime)}&task=${encodeURIComponent(data.modality)}${q}${caps}`,
+    )
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        setSearchResults(
+          Array.isArray(json.results)
+            ? mapSearchResults(json.results as ModelSearchApiResult[])
+            : [],
+        );
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(err);
+        setSearchResults([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.runtime, data.modality, capabilities]);
+
   const handleSearch = async () => {
-    if (!searchQuery || !data.runtime || !data.modality) return;
+    if (!data.runtime || !data.modality) return;
     setIsSearching(true);
     try {
       const caps =
         capabilities.length > 0
           ? `&capabilities=${encodeURIComponent(capabilities.join(","))}`
           : "";
+      const q = searchQuery.trim()
+        ? `&q=${encodeURIComponent(searchQuery.trim())}`
+        : "";
       const res = await fetch(
-        `/api/v1/models/search?runtime=${data.runtime}&task=${encodeURIComponent(data.modality)}&q=${encodeURIComponent(searchQuery)}${caps}`,
+        `/api/v1/models/search?runtime=${encodeURIComponent(data.runtime)}&task=${encodeURIComponent(data.modality)}${q}${caps}`,
       );
       const json = await res.json();
-      if (json.results) {
-        setSearchResults(
-          (json.results as ModelSearchApiResult[]).map((r) => {
-            const params =
-              typeof r.Parameters === "number" && r.Parameters > 0
-                ? r.Parameters
-                : undefined;
-            return {
-              id: r.ID,
-              name: r.ID.split("/").pop() || r.ID,
-              org: r.Author || r.ID.split("/")[0] || "model",
-              downloads: r.Downloads,
-              likes: r.Likes,
-              parameters: params,
-              vram: params
-                ? `~${Math.ceil(estimateSearchVram(r.ID, params))} GB`
-                : undefined,
-              tags: Array.isArray(r.Tags) ? r.Tags : [],
-              pipelineTag: r.PipelineTag,
-            };
-          }),
-        );
-      } else {
-        setSearchResults([]);
-      }
+      setSearchResults(
+        Array.isArray(json.results)
+          ? mapSearchResults(json.results as ModelSearchApiResult[])
+          : [],
+      );
     } catch (e) {
       console.error(e);
       setSearchResults([]);
@@ -589,21 +588,6 @@ export function useDeployModel() {
     () => JSON.stringify(deployPayload, null, 2),
     [deployPayload],
   );
-
-  // Restore curated suggestions whenever the user lands back on the ideal
-  // default combo and the list was emptied (capability toggle, etc.).
-  useEffect(() => {
-    if (
-      !isLoadingCapabilities &&
-      data.runtime === "vllm" &&
-      data.modality === "text-generation" &&
-      searchResults.length === 0 &&
-      !isSearching &&
-      !searchQuery
-    ) {
-      setSearchResults(buildCuratedVllmItems());
-    }
-  }, [data.runtime, data.modality, isLoadingCapabilities, searchResults.length, isSearching, searchQuery]);
 
   const canNext =
     step === 1

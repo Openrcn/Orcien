@@ -31,6 +31,7 @@ export interface RuntimeCapabilityFacet {
 export interface RuntimeCapability {
   id: string;
   name: string;
+  model_source?: string;
   tasks: RuntimeTask[];
   capabilities?: RuntimeCapabilityFacet[];
 }
@@ -122,6 +123,9 @@ export function ModelSearchPanel({
   }, [searchResults, sortBy]);
 
   const selectedTaskLabel = modalities.find((t) => t.id === modality)?.name;
+  const modelSource =
+    selectedRuntime?.model_source ?? (runtime === "ollama" ? "ollama" : "huggingface");
+  const isOllama = modelSource === "ollama";
 
   return (
     <div className="space-y-5">
@@ -131,7 +135,9 @@ export function ModelSearchPanel({
           <h3 className="text-[15px] font-semibold tracking-[-.01em]">
             Find a model
           </h3>
-          <span className={cn(K.pill, "ml-auto")}>Hugging Face Hub</span>
+          <span className={cn(K.pill, "ml-auto")}>
+            {isOllama ? "Ollama Registry" : "Hugging Face Hub"}
+          </span>
         </div>
 
         <div className={K.inner}>
@@ -143,7 +149,11 @@ export function ModelSearchPanel({
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSearch()}
-                placeholder="Search models, e.g. llama, qwen, embedding"
+                placeholder={
+                  isOllama
+                    ? "Enter exact Ollama model name, e.g. llama3.2, qwen2.5:7b, nomic-embed-text"
+                    : "Search models, e.g. llama, qwen, embedding"
+                }
                 className="pl-10 pr-9"
               />
               {isSearching && (
@@ -235,7 +245,7 @@ export function ModelSearchPanel({
           </div>
 
           {/* Model rows */}
-          <div className="max-h-[520px] overflow-y-auto">
+          <div className="max-h-[1040px] overflow-y-auto">
             {sortedModels.length === 0 ? (
               <div className="grid justify-items-center gap-2 px-6 py-14 text-center">
                 <Search className="size-5 text-mut" strokeWidth={1.7} />
@@ -251,9 +261,13 @@ export function ModelSearchPanel({
                 <span className="text-[12px] text-mut">
                   {isLoadingCapabilities
                     ? "Fetching runtime capabilities from the backend."
-                    : searchResults.length === 0
-                      ? "Search by name to find models on the Hub."
-                      : "Try a different query or clear capabilities."}
+                    : !runtime || !modality
+                      ? "Select a modality and runtime to view models."
+                      : isOllama
+                        ? "Enter an exact Ollama model name (e.g. llama3.2 or qwen2.5:7b) or clear the search to browse curated picks."
+                        : searchResults.length === 0
+                          ? "Search by name to find models on the Hub."
+                          : "Try a different query or clear capabilities."}
                 </span>
               </div>
             ) : (
@@ -262,7 +276,11 @@ export function ModelSearchPanel({
                 return (
                   <div
                     key={model.id}
-                    className="border-b border-line last:border-0"
+                    className={cn(
+                      isSelected
+                        ? "border border-accent-t/30"
+                        : "border-b border-line last:border-0",
+                    )}
                   >
                     <ModelCard
                       model={model}
@@ -270,9 +288,10 @@ export function ModelSearchPanel({
                       onClick={() => onSelectModel(model.id)}
                     />
                     {isSelected && (
-                      <div className="border-t border-line bg-band/40 px-4 py-4">
+                      <div className="border-t border-accent-t/15 bg-band/40 px-4 py-4">
                         <ModelDetailCard
                           modelId={selectedModel}
+                          modelSource={modelSource}
                           modelDetails={modelDetails}
                           taskLabel={selectedTaskLabel}
                           requiredVram={requiredVram}

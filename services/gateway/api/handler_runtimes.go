@@ -9,8 +9,20 @@ import (
 type runtimeCapability struct {
 	ID           string                   `json:"id"`
 	Name         string                   `json:"name"`
+	ModelSource  string                   `json:"model_source"`
 	Tasks        []core.ModelTaskInfo     `json:"tasks"`
 	Capabilities []core.ModelCapabilityInfo `json:"capabilities"`
+}
+
+type modelSourceProvider interface {
+	ModelSource() string
+}
+
+func resolveModelSource(runtime core.Runtime) string {
+	if p, ok := runtime.(modelSourceProvider); ok {
+		return p.ModelSource()
+	}
+	return "huggingface"
 }
 
 func (s *Server) handleListRuntimes(w http.ResponseWriter, r *http.Request) {
@@ -28,6 +40,7 @@ func (s *Server) handleListRuntimes(w http.ResponseWriter, r *http.Request) {
 		capability := runtimeCapability{
 			ID:           id,
 			Name:         runtime.Name(),
+			ModelSource:  resolveModelSource(runtime),
 			Tasks:        []core.ModelTaskInfo{},
 			Capabilities: core.CapabilityInfos(runtime.SupportedCapabilities()),
 		}
