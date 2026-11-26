@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,9 +12,8 @@ import (
 
 	"orcn/assets"
 	"orcn/core"
+	"orcn/pkg/huggingface"
 )
-
-var errModelNotFound = errors.New("model not found on Hugging Face")
 
 type VLLMRuntime struct{}
 
@@ -44,8 +41,8 @@ func (v *VLLMRuntime) BuildJobSpec(modelID string, task core.ModelTask, config m
 		return nil, fmt.Errorf("vLLM does not support task %q", task)
 	}
 
-	runtimeConfig, runtimeConfigErr := fetchModelRuntimeConfig(modelID)
-	if errors.Is(runtimeConfigErr, errModelNotFound) {
+	runtimeConfig, runtimeConfigErr := fetchModelRuntimeConfig(context.Background(), modelID)
+	if errors.Is(runtimeConfigErr, huggingface.ErrModelNotFound) {
 		return nil, fmt.Errorf("model %q was not found on Hugging Face", modelID)
 	}
 	if runtimeConfigErr != nil {
@@ -160,53 +157,22 @@ func configValue(config map[string]string, key, fallback string) string {
 
 func floatPtr(value float64) *float64 { return &value }
 
-type hfModelSearchResult struct {
-	ID        string `json:"id"`
-	Downloads int    `json:"downloads"`
-	Config    struct {
-		Architectures []string `json:"architectures"`
-	} `json:"config"`
-	Safetensors struct {
-		Total int64 `json:"total"`
-	} `json:"safetensors"`
-}
-
 type modelRuntimeConfig struct {
 	Architectures []string
 	PipelineTag   string
 	Config        map[string]any
 }
 
-func fetchModelRuntimeConfig(modelID string) (*modelRuntimeConfig, error) {
-	resp, err := http.Get(fmt.Sprintf("https://huggingface.co/api/models/%s", modelID))
+func fetchModelRuntimeConfig(ctx context.Context, modelID string) (*modelRuntimeConfig, error) {
+	model, err := huggingface.Default().Model(ctx, modelID)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("%w: %s", errModelNotFound, modelID)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("model details failed: %s", resp.Status)
-	}
-
-	var model struct {
-		Config      map[string]any `json:"config"`
-		PipelineTag string         `json:"pipeline_tag"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&model); err != nil {
-		return nil, err
-	}
-
-	architectures := []string{}
-	if values, ok := model.Config["architectures"].([]any); ok {
-		for _, value := range values {
-			if architecture, ok := value.(string); ok {
-				architectures = append(architectures, architecture)
-			}
-		}
-	}
-	return &modelRuntimeConfig{Architectures: architectures, PipelineTag: model.PipelineTag, Config: model.Config}, nil
+	return &modelRuntimeConfig{
+		Architectures: model.Architectures(),
+		PipelineTag:   model.PipelineTag,
+		Config:        model.Config,
+	}, nil
 }
 
 func modelMaxLength(config map[string]any) int {
@@ -229,10 +195,7 @@ func modelMaxLength(config map[string]any) int {
 	return 0
 }
 
-const (
-	hfSearchCacheTTL    = 30 * time.Minute
-	hfBootstrapCacheTTL = 1 * time.Hour
-)
+const hfBootstrapCacheTTL = 1 * time.Hour
 
 type vllmBootstrapEntry struct {
 	ID           string   `json:"id"`
@@ -244,11 +207,6 @@ type vllmBootstrapEntry struct {
 	Tags         []string `json:"tags"`
 }
 
-type hfSearchCacheEntry struct {
-	models    []hfModelSearchResult
-	fetchedAt time.Time
-}
-
 type hfBootstrapCacheEntry struct {
 	models    []core.ModelInfo
 	fetchedAt time.Time
@@ -256,10 +214,8 @@ type hfBootstrapCacheEntry struct {
 
 var hfCache = struct {
 	sync.Mutex
-	search    map[string]hfSearchCacheEntry
 	bootstrap map[core.ModelTask]hfBootstrapCacheEntry
 }{
-	search:    make(map[string]hfSearchCacheEntry),
 	bootstrap: make(map[core.ModelTask]hfBootstrapCacheEntry),
 }
 
@@ -310,31 +266,15 @@ func loadVLLMBootstrap(task core.ModelTask) ([]core.ModelInfo, error) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, "https://huggingface.co/api/models/"+models[idx].ID, nil)
-			if reqErr != nil {
+			model, modelErr := huggingface.Default().Model(ctx, models[idx].ID)
+			if modelErr != nil {
 				return
 			}
-			resp, respErr := http.DefaultClient.Do(req)
-			if respErr != nil || resp.StatusCode != http.StatusOK {
-				if resp != nil {
-					resp.Body.Close()
-				}
-				return
+			if model.Downloads > 0 {
+				models[idx].Downloads = model.Downloads
 			}
-			defer resp.Body.Close()
-			var info struct {
-				Downloads   int `json:"downloads"`
-				Safetensors struct {
-					Total int64 `json:"total"`
-				} `json:"safetensors"`
-			}
-			if decErr := json.NewDecoder(resp.Body).Decode(&info); decErr == nil {
-				if info.Downloads > 0 {
-					models[idx].Downloads = info.Downloads
-				}
-				if info.Safetensors.Total > 0 {
-					models[idx].Parameters = float64(info.Safetensors.Total) / 1e9
-				}
+			if parameters := model.Parameters(); parameters > 0 {
+				models[idx].Parameters = parameters
 			}
 		}(i)
 	}
@@ -360,13 +300,20 @@ func (v *VLLMRuntime) SearchModels(query string, task core.ModelTask, _ []string
 	seen := make(map[string]bool)
 	var lastErr error
 	for _, pipelineTag := range pipelineTags {
-		models, searchErr := searchHuggingFaceModels(query, pipelineTag)
+		models, searchErr := huggingface.Default().Search(context.Background(),
+			huggingface.NewSearchQuery(query).
+				PipelineTag(pipelineTag).
+				SortBy("downloads").
+				Descending().
+				Limit(100).
+				ExpandFields("config", "safetensors"),
+		)
 		if searchErr != nil {
 			lastErr = searchErr
 			continue
 		}
 		for _, model := range models {
-			architecture := firstSupportedArchitecture(model.Config.Architectures, architectures)
+			architecture := firstSupportedArchitecture(model.Architectures(), architectures)
 			if architecture == "" || !IsVLLMCompatible(model.ID) || seen[model.ID] {
 				continue
 			}
@@ -374,13 +321,13 @@ func (v *VLLMRuntime) SearchModels(query string, task core.ModelTask, _ []string
 			results = append(results, core.ModelInfo{
 				ID:           model.ID,
 				Name:         model.ID,
-				Author:       modelAuthor(model.ID),
+				Author:       huggingface.ModelAuthor(model.ID),
 				Architecture: architecture,
 				Downloads:    model.Downloads,
 				PipelineTag:  pipelineTag,
 				Tags:         []string{architecture},
 				Task:         string(task),
-				Parameters:   float64(model.Safetensors.Total) / 1e9,
+				Parameters:   model.Parameters(),
 			})
 		}
 	}
@@ -390,50 +337,8 @@ func (v *VLLMRuntime) SearchModels(query string, task core.ModelTask, _ []string
 	return results, nil
 }
 
-func searchHuggingFaceModels(query, pipelineTag string) ([]hfModelSearchResult, error) {
-	cacheKey := query + "\x00" + pipelineTag
-	hfCache.Lock()
-	if entry, ok := hfCache.search[cacheKey]; ok && time.Since(entry.fetchedAt) < hfSearchCacheTTL {
-		out := entry.models
-		hfCache.Unlock()
-		return out, nil
-	}
-	hfCache.Unlock()
-
-	searchURL := fmt.Sprintf("https://huggingface.co/api/models?search=%s&limit=100&sort=downloads&direction=-1&pipeline_tag=%s&expand=config&expand=safetensors", url.QueryEscape(query), url.QueryEscape(pipelineTag))
-	resp, err := http.Get(searchURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("hugging face search failed for pipeline %q: %s", pipelineTag, resp.Status)
-	}
-
-	var models []hfModelSearchResult
-	if err := json.NewDecoder(resp.Body).Decode(&models); err != nil {
-		return nil, err
-	}
-
-	hfCache.Lock()
-	if len(hfCache.search) > 500 {
-		hfCache.search = make(map[string]hfSearchCacheEntry)
-	}
-	hfCache.search[cacheKey] = hfSearchCacheEntry{models: models, fetchedAt: time.Now()}
-	hfCache.Unlock()
-	return models, nil
-}
-
 func normalizeTask(task core.ModelTask) core.ModelTask {
 	return core.NormalizeModelTask(task)
-}
-
-func modelAuthor(modelID string) string {
-	parts := strings.Split(modelID, "/")
-	if len(parts) > 1 {
-		return parts[0]
-	}
-	return ""
 }
 
 func firstSupportedArchitecture(candidates []string, supported map[string]bool) string {
@@ -456,28 +361,23 @@ func IsVLLMCompatible(id string) bool {
 }
 
 func (v *VLLMRuntime) GetModelDetails(modelID string, task core.ModelTask) (any, error) {
-	modelURL := fmt.Sprintf("https://huggingface.co/api/models/%s", modelID)
-	resp, err := http.Get(modelURL)
+	ctx := context.Background()
+	data, err := huggingface.Default().ModelDetails(ctx, modelID)
 	if err != nil {
+		if errors.Is(err, huggingface.ErrModelNotFound) {
+			return nil, fmt.Errorf("model not found")
+		}
 		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("model not found")
 	}
 
-	var data map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
-	}
 	normalizedTask := normalizeTask(task)
 	if normalizedTask == core.TaskEmbedding || normalizedTask == core.TaskTextGeneration || normalizedTask == core.TaskScore || normalizedTask == core.TaskMultimodal {
-		enrichModelConfig(modelID, data, normalizedTask)
+		enrichModelConfig(ctx, modelID, data, normalizedTask)
 	}
 	if metadata := modelMetadata(data, normalizedTask); len(metadata) > 0 {
 		data["metadata"] = metadata
 	}
-	injectRecommendedParsers(modelID, data)
+	injectRecommendedParsers(ctx, modelID, data)
 	return data, nil
 }
 
@@ -494,23 +394,15 @@ func modelMetadata(data map[string]any, task core.ModelTask) map[string]any {
 	}
 }
 
-func enrichModelConfig(modelID string, data map[string]any, task core.ModelTask) {
+func enrichModelConfig(ctx context.Context, modelID string, data map[string]any, task core.ModelTask) {
 	config := map[string]any{}
 	if existing, ok := data["config"].(map[string]any); ok {
 		config = existing
 	}
 
 	loadJSON := func(path string) map[string]any {
-		resp, err := http.Get(fmt.Sprintf("https://huggingface.co/%s/raw/main/%s", modelID, path))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			if resp != nil {
-				resp.Body.Close()
-			}
-			return nil
-		}
-		defer resp.Body.Close()
-		var value map[string]any
-		if err := json.NewDecoder(resp.Body).Decode(&value); err != nil {
+		value, err := huggingface.Default().RawJSON(ctx, modelID, path)
+		if err != nil {
 			return nil
 		}
 		return value

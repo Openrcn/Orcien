@@ -1,12 +1,11 @@
 package vllm
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-)
+	"context"
+	"regexp"
 
-import "regexp"
+	"orcn/pkg/huggingface"
+)
 
 type ParserProfile struct {
 	ID          string
@@ -119,27 +118,18 @@ func DetectParser(chatTemplate string, profiles []ParserProfile) string {
 	return ""
 }
 
-func injectRecommendedParsers(modelID string, data map[string]interface{}) {
+func injectRecommendedParsers(ctx context.Context, modelID string, data map[string]interface{}) {
 	if template := chatTemplateFrom(data); template != "" {
 		setRecommendedParsers(data, template)
 		return
 	}
 
-	tokenizerURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/tokenizer_config.json", modelID)
-	resp, err := http.Get(tokenizerURL)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
-		}
+	tokenizerData, err := huggingface.Default().RawJSON(ctx, modelID, "tokenizer_config.json")
+	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
-
-	var tokenizerData map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&tokenizerData); err == nil {
-		if template := chatTemplateFrom(tokenizerData); template != "" {
-			setRecommendedParsers(data, template)
-		}
+	if template := chatTemplateFrom(tokenizerData); template != "" {
+		setRecommendedParsers(data, template)
 	}
 }
 
