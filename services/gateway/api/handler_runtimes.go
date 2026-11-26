@@ -7,15 +7,20 @@ import (
 )
 
 type runtimeCapability struct {
-	ID           string                   `json:"id"`
-	Name         string                   `json:"name"`
-	ModelSource  string                   `json:"model_source"`
-	Tasks        []core.ModelTaskInfo     `json:"tasks"`
+	ID           string                     `json:"id"`
+	Name         string                     `json:"name"`
+	ModelSource  string                     `json:"model_source"`
+	Tasks        []core.ModelTaskInfo       `json:"tasks"`
 	Capabilities []core.ModelCapabilityInfo `json:"capabilities"`
+	Meta         *core.RuntimeMeta          `json:"meta,omitempty"`
 }
 
 type modelSourceProvider interface {
 	ModelSource() string
+}
+
+type metaProvider interface {
+	RuntimeMeta() core.RuntimeMeta
 }
 
 func resolveModelSource(runtime core.Runtime) string {
@@ -23,6 +28,14 @@ func resolveModelSource(runtime core.Runtime) string {
 		return p.ModelSource()
 	}
 	return "huggingface"
+}
+
+func resolveMeta(runtime core.Runtime) *core.RuntimeMeta {
+	if p, ok := runtime.(metaProvider); ok {
+		meta := p.RuntimeMeta()
+		return &meta
+	}
+	return nil
 }
 
 func (s *Server) handleListRuntimes(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +54,7 @@ func (s *Server) handleListRuntimes(w http.ResponseWriter, r *http.Request) {
 			ID:           id,
 			Name:         runtime.Name(),
 			ModelSource:  resolveModelSource(runtime),
+			Meta:         resolveMeta(runtime),
 			Tasks:        []core.ModelTaskInfo{},
 			Capabilities: core.CapabilityInfos(runtime.SupportedCapabilities()),
 		}

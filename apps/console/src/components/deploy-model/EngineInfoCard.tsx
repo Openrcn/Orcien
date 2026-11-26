@@ -4,13 +4,14 @@ import { Info } from "lucide-react";
 import { cn } from "cn";
 import { Logo } from "@/components/ui/Logos";
 import { K } from "@/components/providers/kit";
-import { getEngineMeta } from "./engine-meta";
+import { type EngineMeta, getEngineMeta } from "./engine-meta";
 
 interface EngineInfoCardProps {
   runtime: string;
   taskLabel?: string;
   image: string;
   optionCount: number;
+  engineMeta?: EngineMeta | null;
 }
 
 /** Read-only summary of the engine selected in step 1. */
@@ -19,8 +20,9 @@ export function EngineInfoCard({
   taskLabel,
   image,
   optionCount,
+  engineMeta,
 }: EngineInfoCardProps) {
-  const engine = getEngineMeta(runtime);
+  const engine = getEngineMeta(runtime, engineMeta);
   if (!engine) return null;
 
   const trimmedImage = image.trim();

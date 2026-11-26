@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"orcn/core"
@@ -53,6 +54,25 @@ func (v *OllamaRuntime) SupportedCapabilities() []core.ModelCapability {
 	}
 }
 
+const (
+	ollamaImage      = "ollama/ollama:latest"
+	ollamaPort       = 11434
+	ollamaHealthPath = "/api/tags"
+)
+
+func (v *OllamaRuntime) RuntimeMeta() core.RuntimeMeta {
+	return core.RuntimeMeta{
+		Image:      ollamaImage,
+		Version:    "latest",
+		Port:       ollamaPort,
+		HealthPath: ollamaHealthPath,
+		API:        "Ollama native",
+		Endpoints:  "/api/generate · /api/chat",
+		Tagline:    "Local-first runtime for open models from the Ollama library.",
+		Highlights: []string{"Tools", "Thinking", "Vision"},
+	}
+}
+
 func (v *OllamaRuntime) BuildJobSpec(modelID string, task core.ModelTask, advancedConfig map[string]string) (*core.JobSpec, error) {
 	switch core.NormalizeModelTask(task) {
 	case core.TaskTextGeneration, core.TaskEmbedding, core.TaskMultimodal, core.TaskDecision:
@@ -69,7 +89,7 @@ func (v *OllamaRuntime) BuildJobSpec(modelID string, task core.ModelTask, advanc
 		contextLength = val
 	}
 
-	image := "ollama/ollama:latest"
+	image := ollamaImage
 	if val, ok := advancedConfig["image"]; ok && val != "" {
 		image = val
 	}
@@ -82,7 +102,7 @@ func (v *OllamaRuntime) BuildJobSpec(modelID string, task core.ModelTask, advanc
 					Image: image,
 					GPU:   true,
 					Env: map[string]string{
-						"OLLAMA_HOST":              "0.0.0.0:11434",
+						"OLLAMA_HOST":              fmt.Sprintf("0.0.0.0:%d", ollamaPort),
 						"OLLAMA_KEEP_ALIVE":        "-1",
 						"OLLAMA_FLASH_ATTENTION":   "1",
 						"OLLAMA_MAX_LOADED_MODELS": "1",
@@ -96,9 +116,9 @@ func (v *OllamaRuntime) BuildJobSpec(modelID string, task core.ModelTask, advanc
 					},
 					Expose: []core.ExposeSpec{
 						{
-							Port: 11434,
+							Port: ollamaPort,
 							HealthCheck: &core.HealthCheckSpec{
-								Path:           "/api/tags",
+								Path:           ollamaHealthPath,
 								ExpectedStatus: 200,
 							},
 						},

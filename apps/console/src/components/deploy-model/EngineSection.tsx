@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/Select";
 import { K } from "@/components/providers/kit";
 import { ConfigOption } from "./AdvancedConfigSection";
+import { type EngineMeta, getEngineMeta } from "./engine-meta";
 import { EngineInfoCard } from "./EngineInfoCard";
-import { getEngineMeta } from "./engine-meta";
 
 interface EngineSectionProps {
   runtime: string;
@@ -25,11 +25,13 @@ interface EngineSectionProps {
   onChange: (key: string, value: string) => void;
   image: string;
   onImageChange: (value: string) => void;
+  engineMeta?: EngineMeta | null;
 }
 
 /* Keys that are commonly tuned and belong in the always-open Settings card. */
 const IMPORTANT_KEYS = new Set([
   "gpu_memory_utilization",
+  "mem_fraction_static",
   "max_model_len",
   "context_length",
   "num_parallel",
@@ -50,6 +52,7 @@ export function EngineSection({
   onChange,
   image,
   onImageChange,
+  engineMeta,
 }: EngineSectionProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showContainer, setShowContainer] = useState(false);
@@ -66,17 +69,7 @@ export function EngineSection({
     advanced = options.slice(3);
   }
 
-  // vLLM currently exposes only advanced + container; hide the Settings card
-  // entirely unless the runtime actually surfaces important keys. For vLLM we
-  // force everything into advanced so the card disappears (requirement).
-  if (runtime === "vllm") {
-    if (options.length > 0) {
-      important = [];
-      advanced = options;
-    }
-  }
-
-  const container = getEngineMeta(runtime);
+  const container = getEngineMeta(runtime, engineMeta);
 
   return (
     <div className="space-y-6">
@@ -86,6 +79,7 @@ export function EngineSection({
         taskLabel={taskLabel}
         image={image}
         optionCount={options.length}
+        engineMeta={engineMeta}
       />
 
       {/* 1. Settings — only when the runtime exposes important keys */}

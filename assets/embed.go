@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed vllm_bootstrap.json ollama_bootstrap.json
+//go:embed vllm_bootstrap.json ollama_bootstrap.json sglang_bootstrap.json
 var embeddedFS embed.FS
 
 // ReadFile loads a named asset from ./assets/<name> on disk when present

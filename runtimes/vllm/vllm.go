@@ -86,6 +86,21 @@ const (
 	vllmCUDAVersion = "12.9"
 )
 
+func (v *VLLMRuntime) RuntimeMeta() core.RuntimeMeta {
+	return core.RuntimeMeta{
+		Image:      vllmImage,
+		Version:    "v0.26.0",
+		Port:       vllmPort,
+		HealthPath: vllmHealthPath,
+		API:        "OpenAI-compatible",
+		Endpoints:  "/v1/chat/completions · /v1/embeddings",
+		CUDA:       vllmCUDAVersion,
+		MinVRAMGB:  vllmMinVRAMGB,
+		Tagline:    "OpenAI-compatible inference server for high-throughput serving.",
+		Highlights: []string{"Continuous batching", "PagedAttention", "AWQ / quantized models"},
+	}
+}
+
 func (v *VLLMRuntime) buildJobSpec(_ string, entrypoint []string, command []string, healthPath string, config map[string]string) *core.JobSpec {
 	image := vllmImage
 	if custom, ok := config["image"]; ok && custom != "" {

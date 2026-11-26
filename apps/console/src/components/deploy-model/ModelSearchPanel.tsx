@@ -28,12 +28,16 @@ export interface RuntimeCapabilityFacet {
   description?: string;
 }
 
+import { type EngineMeta } from "./engine-meta";
+
 export interface RuntimeCapability {
   id: string;
   name: string;
   model_source?: string;
   tasks: RuntimeTask[];
   capabilities?: RuntimeCapabilityFacet[];
+  /* Serving facts exposed by the backend runtimes API. */
+  meta?: EngineMeta | null;
 }
 
 interface ModelSearchPanelProps {

@@ -135,6 +135,9 @@ function DeployAIModelContent() {
           {step === 3 && (
             <EngineSection
               runtime={data.runtime}
+              engineMeta={
+                runtimes.find((r) => r.id === data.runtime)?.meta ?? null
+              }
               modality={data.modality}
               taskLabel={taskLabel}
               schema={advancedSchema}

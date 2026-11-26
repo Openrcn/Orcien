@@ -15,6 +15,7 @@ import (
 	"orcn/providers/local"
 	"orcn/providers/nosana"
 	"orcn/runtimes/ollama"
+	"orcn/runtimes/sglang"
 	"orcn/runtimes/vllm"
 	"orcn/services/gateway/api"
 	"orcn/services/gateway/health"
@@ -49,6 +50,9 @@ func main() {
 
 	vllmRT := vllm.New()
 	core.RegisterRuntime("vllm", vllmRT)
+
+	sglangRT := sglang.New()
+	core.RegisterRuntime("sglang", sglangRT)
 
 	ollamaRT := ollama.New()
 	core.RegisterRuntime("ollama", ollamaRT)

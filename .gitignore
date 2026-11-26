@@ -47,6 +47,7 @@ yarn-error.log*
 
 scripts/*
 !scripts/dev.sh
+!scripts/sglang_registry_to_json.py
 orcn.db
 TODO.txt
 TODO.ingress.txt

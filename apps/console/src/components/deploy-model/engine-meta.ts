@@ -1,9 +1,9 @@
 /*
- * Static, read-only engine facts for the step-3 Engine card.
+ * Fallback engine facts for the step-3 Engine card.
  *
- * These mirror the backend runtime registries (runtimes/vllm/vllm.go,
- * runtimes/ollama/ollama.go). The console API does not expose image/version
- * metadata yet, so it lives here until that endpoint exists.
+ * The backend now exposes the same facts as `meta` on GET /api/v1/runtimes
+ * (see core.RuntimeMeta in core/interfaces.go). This static map only fills
+ * gaps when the backend does not provide meta yet.
  */
 export interface EngineMeta {
   id: string;
@@ -50,8 +50,30 @@ export const ENGINE_META: Record<string, EngineMeta> = {
     modelSource: "Ollama library",
     highlights: ["Tools", "Thinking", "Vision"],
   },
+  sglang: {
+    id: "sglang",
+    name: "SGLang",
+    version: "v0.5.23",
+    tagline: "High-throughput serving with RadixAttention and fast prefix caching.",
+    image: "docker.io/lmsysorg/sglang:v0.5.23",
+    health: "/health",
+    port: 30000,
+    api: "OpenAI-compatible",
+    endpoints: "/v1/chat/completions · /generate",
+    modelSource: "Hugging Face",
+    cuda: "13.0",
+    minVramGB: 16,
+    highlights: ["RadixAttention", "Continuous batching", "Chunked prefill"],
+  },
 };
 
-export function getEngineMeta(runtime: string): EngineMeta | null {
-  return ENGINE_META[runtime.toLowerCase().trim()] ?? null;
+export function getEngineMeta(
+  runtime: string,
+  fromBackend?: EngineMeta | null,
+): EngineMeta | null {
+  const key = runtime.toLowerCase().trim();
+  if (fromBackend) {
+    return { ...ENGINE_META[key], ...fromBackend, id: key };
+  }
+  return ENGINE_META[key] ?? null;
 }

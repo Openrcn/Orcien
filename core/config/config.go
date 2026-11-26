@@ -60,7 +60,7 @@ func LoadConfig() (*Config, error) {
 		KMSProvider:  getEnv("KMS_PROVIDER", "local"),
 		KMSMasterKey: getEnv("KMS_MASTER_KEY", ""),
 
-		MaxConnsPerHost:        getEnvAsInt("GATEWAY_MAX_CONNS_PER_HOST", 20),
+		MaxConnsPerHost:        getEnvAsInt("GATEWAY_MAX_CONNS_PER_HOST", 512),
 		MaxActiveRequests:      getEnvAsInt("GATEWAY_MAX_ACTIVE_REQUESTS", 100),
 		GatewaySyncIntervalSec: getEnvAsInt("GATEWAY_SYNC_INTERVAL_SEC", 5),
 		ControllerSyncInterval: getEnvAsInt("CONTROLLER_SYNC_INTERVAL_SEC", 15),

@@ -202,6 +202,29 @@ type Runtime interface {
 	GetAdvancedConfigSchema(task ModelTask) []ConfigOption
 }
 
+// RuntimeMeta describes the static serving facts of a runtime's container:
+// the image it runs, the port and health endpoint it exposes, and a few
+// display facts for the console. The gateway surfaces it on the runtimes
+// listing so the console renders engine cards from backend data.
+type RuntimeMeta struct {
+	Image      string   `json:"image"`
+	Version    string   `json:"version,omitempty"`
+	Port       int      `json:"port"`
+	HealthPath string   `json:"health_path"`
+	API        string   `json:"api,omitempty"`
+	Endpoints  string   `json:"endpoints,omitempty"`
+	CUDA       string   `json:"cuda,omitempty"`
+	MinVRAMGB  int      `json:"min_vram_gb,omitempty"`
+	Tagline    string   `json:"tagline,omitempty"`
+	Highlights []string `json:"highlights,omitempty"`
+}
+
+// RuntimeMetaProvider is implemented by runtimes that can describe their
+// serving container.
+type RuntimeMetaProvider interface {
+	RuntimeMeta() RuntimeMeta
+}
+
 type NodeInfo struct {
 	Status    string     `json:"status"`
 	Endpoints []Endpoint `json:"endpoints"`

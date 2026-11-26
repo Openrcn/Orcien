@@ -1,0 +1,94 @@
+{
+  "text-generation": [
+    {
+      "id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "author": "meta-llama",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8,
+      "downloads": 2840000,
+      "tags": ["llama-3.1", "instruct"]
+    },
+    {
+      "id": "Qwen/Qwen2.5-7B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.6,
+      "downloads": 2900000,
+      "tags": ["qwen2.5", "instruct"]
+    },
+    {
+      "id": "Qwen/Qwen3-8B",
+      "author": "Qwen",
+      "architecture": "Qwen3ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8.2,
+      "downloads": 5700000,
+      "tags": ["qwen3"]
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "author": "deepseek-ai",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.6,
+      "downloads": 1800000,
+      "tags": ["deepseek", "r1", "reasoning"]
+    },
+    {
+      "id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "author": "mistralai",
+      "architecture": "MistralForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 7.3,
+      "downloads": 1500000,
+      "tags": ["mistral", "instruct"]
+    },
+    {
+      "id": "google/gemma-2-9b-it",
+      "author": "google",
+      "architecture": "Gemma2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 9.2,
+      "downloads": 1400000,
+      "tags": ["gemma-2", "instruct"]
+    },
+    {
+      "id": "meta-llama/Meta-Llama-3-8B-Instruct",
+      "author": "meta-llama",
+      "architecture": "LlamaForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 8,
+      "downloads": 2100000,
+      "tags": ["llama-3", "instruct"]
+    },
+    {
+      "id": "Qwen/Qwen2.5-14B-Instruct",
+      "author": "Qwen",
+      "architecture": "Qwen2ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 14.8,
+      "downloads": 1100000,
+      "tags": ["qwen2.5", "instruct"]
+    },
+    {
+      "id": "openai/gpt-oss-20b",
+      "author": "openai",
+      "architecture": "GptOssForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 21,
+      "downloads": 900000,
+      "tags": ["gpt-oss"]
+    },
+    {
+      "id": "microsoft/Phi-4",
+      "author": "microsoft",
+      "architecture": "Phi3ForCausalLM",
+      "pipeline_tag": "text-generation",
+      "parameters": 14.7,
+      "downloads": 800000,
+      "tags": ["phi-4"]
+    }
+  ]
+}
