@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Braces } from "lucide-react";
-import { SpecViewer } from "@/components/deployments/detail/SpecViewer";
+import { SpecViewer, specHasContent } from "@/components/deployments/detail/SpecViewer";
 import { SectionCard } from "@/components/deployments/node-detail/shared";
 
 type Props = {
@@ -31,19 +31,21 @@ export function NodeConfigurationTab({ deployment, node }: Props) {
 
   return (
     <div className="space-y-3">
-      <SectionCard
-        title="Node Configuration"
-        subtitle="Resolved node metadata"
-        action={<Braces className="size-4 text-[var(--text-muted)]" />}
-      >
-        <SpecViewer config={nodeConfig} />
-      </SectionCard>
+      {specHasContent(nodeConfig) && (
+        <SectionCard
+          title="Node Configuration"
+          subtitle="Resolved node metadata"
+          action={<Braces className="size-4 text-mut2" />}
+        >
+          <SpecViewer config={nodeConfig} />
+        </SectionCard>
+      )}
 
       <SectionCard title="Parent Job Spec" subtitle="Deployment job definition">
-        {parsedSpec ? (
+        {parsedSpec && specHasContent(parsedSpec) ? (
           <SpecViewer config={parsedSpec} />
         ) : (
-          <div className="rounded border border-dashed border-[var(--border)] px-3 py-6 text-center text-[11px] text-[var(--text-muted)]">
+          <div className="m-3 rounded-xl border border-dashed border-line2 px-3 py-6 text-center text-[11px] text-mut2">
             No job spec available for this deployment.
           </div>
         )}

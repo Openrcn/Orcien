@@ -154,7 +154,7 @@ export function NodeLogsTab({
               <button
                 type="button"
                 onClick={() => onSelect(null)}
-                className="inline-flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-main)]"
+                className="inline-flex items-center gap-1 rounded-lg border border-line bg-card px-2 py-1 text-[11px] text-mut2 transition hover:border-line2 hover:text-fg"
               >
                 <X className="size-3" /> Clear filter
               </button>
@@ -165,14 +165,14 @@ export function NodeLogsTab({
           </div>
         }
       >
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
           <Select
             value={kind}
             onValueChange={(value: string) => setKind((value as KindFilter) ?? "all")}
           >
             <SelectTrigger
               size="sm"
-              className="h-8 min-w-[150px] border-[var(--border)] bg-[var(--surface)] text-[11px] text-[var(--text-main)]"
+              className="h-8 min-w-[150px] border-line bg-card text-[11px] text-fg"
             >
               <SelectValue />
             </SelectTrigger>
@@ -191,7 +191,7 @@ export function NodeLogsTab({
           >
             <SelectTrigger
               size="sm"
-              className="h-8 min-w-[160px] border-[var(--border)] bg-[var(--surface)] text-[11px] text-[var(--text-main)]"
+              className="h-8 min-w-[160px] border-line bg-card text-[11px] text-fg"
             >
               <SelectValue />
             </SelectTrigger>
@@ -209,18 +209,18 @@ export function NodeLogsTab({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search logs..."
-            className="h-8 min-w-[180px] flex-1 border-[var(--border)] bg-[var(--surface)] text-[11px] text-[var(--text-main)] md:text-[11px]"
+            className="h-8 min-w-[180px] flex-1 border-line bg-card text-[11px] text-fg md:text-[11px]"
           />
 
-          <span className="ml-auto font-mono text-[10px] text-[var(--text-muted)]">
+          <span className="ml-auto font-mono text-[10px] text-mut2">
             {visibleLogs.length} / {logs.length} lines
           </span>
         </div>
 
         {visibleLogs.length === 0 ? (
-          <div className="flex h-[68vh] min-h-[460px] flex-col items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-hover)] px-4 py-10 text-center">
-            <Terminal className="size-5 text-[var(--text-muted)] opacity-40" />
-            <p className="mt-3 text-xs font-medium text-[var(--text-muted)]">
+          <div className="mx-3 mb-3 flex h-[68vh] min-h-[460px] flex-col items-center justify-center rounded-xl border border-line bg-field px-4 py-10 text-center">
+            <Terminal className="size-5 text-mut2 opacity-40" />
+            <p className="mt-3 text-xs font-medium text-mut2">
               {status === "connecting"
                 ? "Connecting to log stream..."
                 : logs.length > 0
@@ -232,7 +232,7 @@ export function NodeLogsTab({
             {error ? (
               <p className="mt-1 max-w-sm text-[10px] text-red-500">{error}</p>
             ) : (
-              <p className="mt-1 max-w-sm text-[10px] text-[var(--text-muted)] opacity-70">
+              <p className="mt-1 max-w-sm text-[10px] text-mut2 opacity-70">
                 Logs stream live from the node and are cleared when you leave
                 this tab.
               </p>
@@ -241,14 +241,14 @@ export function NodeLogsTab({
         ) : (
           <div
             ref={scrollRef}
-            className="h-[68vh] min-h-[460px] overflow-auto rounded border border-[var(--border)] bg-[var(--surface-hover)] p-3 font-mono text-[11.5px] leading-relaxed"
+            className="mx-3 mb-3 h-[68vh] min-h-[460px] overflow-auto rounded-xl border border-line bg-field font-mono text-[11.5px] leading-relaxed"
           >
             {visibleLogs.map((line, idx) => (
               <div
                 key={idx}
-                className="flex gap-2 whitespace-pre-wrap break-all border-b border-[var(--border)]/40 py-0.5"
+                className="flex gap-2 whitespace-pre-wrap break-all border-b border-line/40 py-0.5"
               >
-                <span className="shrink-0 text-[var(--text-muted)] opacity-60">
+                <span className="shrink-0 text-mut2 opacity-60">
                   {formatTime(line.timestamp)}
                 </span>
                 <span
@@ -261,7 +261,7 @@ export function NodeLogsTab({
                 >
                   {line.container}
                 </span>
-                <span className="text-[var(--text-main)]">{line.log}</span>
+                <span className="text-fg">{line.log}</span>
               </div>
             ))}
           </div>

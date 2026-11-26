@@ -8,6 +8,7 @@ type InfoRowProps = {
   highlight?: boolean;
   copyable?: boolean;
   copyValue?: string;
+  grow?: boolean;
 };
 
 export function InfoRow({
@@ -17,21 +18,22 @@ export function InfoRow({
   highlight = false,
   copyable = false,
   copyValue,
+  grow = false,
 }: InfoRowProps) {
   const textToCopy =
     copyValue ?? (typeof value === "string" ? value : undefined);
 
   return (
-    <div className="flex items-center gap-4 border-b border-[var(--border)] py-2.5 last:border-b-0">
-      <div className="w-40 shrink-0 text-xs font-medium text-[var(--text-muted)]">
+    <div
+      className={`flex items-center gap-4 border-b border-line px-4 py-[11px] text-[13.5px] last:border-b-0 ${grow ? "flex-1" : ""}`}
+    >
+      <div className="w-40 shrink-0 text-[12.5px] font-medium text-mut2">
         {label}
       </div>
       <div
         className={[
-          "flex-1 text-xs flex items-center justify-between gap-2 min-w-0",
-          highlight
-            ? "font-semibold text-[var(--text-main)]"
-            : "text-[var(--text-main)]",
+          "flex min-w-0 flex-1 items-center justify-between gap-2",
+          highlight ? "font-semibold text-fg" : "text-fg",
           monospace ? "font-mono" : "",
         ].join(" ")}
       >

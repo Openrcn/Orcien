@@ -1,31 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  Activity,
   Boxes,
+  Clock,
+  Cpu,
   ExternalLink,
   Link2,
+  MemoryStick,
+  Radio,
   Server,
 } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Logo } from "@/components/ui/Logos";
 import { InfoRow } from "@/components/deployments/detail/InfoRow";
 import {
+  FakeGraph,
   MetricTile,
   SectionCard,
+  StatusPill,
   shortNodeId,
 } from "@/components/deployments/node-detail/shared";
 import { routeUrl } from "@/lib/public-url";
-
-type StatusVariant = (
-  status: string,
-) => "default" | "success" | "warning" | "error";
-
 type NodeOverviewTabProps = {
   deployment: any;
   node: any;
   onOpenTab: (tab: string) => void;
-  statusVariant: StatusVariant;
 };
 
 type NodeEndpoint = {
@@ -143,7 +143,6 @@ export function NodeOverviewTab({
   deployment,
   node,
   onOpenTab,
-  statusVariant,
 }: NodeOverviewTabProps) {
   const createdAt = node.CreatedAt
     ? new Date(node.CreatedAt).toLocaleString()
@@ -171,9 +170,6 @@ export function NodeOverviewTab({
     containers = [];
   }
   const workloadStatus = node.AppStatus || node.InfraStatus || "UNKNOWN";
-  const workloadRunning = ["RUNNING", "READY", "HEALTHY"].includes(
-    String(workloadStatus).toUpperCase(),
-  );
   const workloadDot = ["RUNNING", "READY", "HEALTHY"].includes(
     String(workloadStatus).toUpperCase(),
   )
@@ -201,24 +197,32 @@ export function NodeOverviewTab({
           label="Status"
           value={node.InfraStatus || "UNKNOWN"}
           meta={`App: ${node.AppStatus || "unknown"}`}
+          icon={Activity}
+          hint="View events"
           onClick={() => onOpenTab("events")}
         />
         <MetricTile
           label="Uptime"
           value={uptimeValue}
           meta={isLive ? "Since node start" : "Node not running"}
+          icon={Clock}
+          hint="View events"
           onClick={() => onOpenTab("events")}
         />
         <MetricTile
           label="Heartbeat"
           value={heartbeatValue}
           meta="Last agent check-in"
+          icon={Radio}
+          hint="View events"
           onClick={() => onOpenTab("events")}
         />
         <MetricTile
           label="Containers"
           value={String(containers.length)}
           meta="Declared in job spec"
+          icon={Boxes}
+          hint="View workloads"
           onClick={() => onOpenTab("workloads")}
         />
       </div>
@@ -227,31 +231,33 @@ export function NodeOverviewTab({
         <SectionCard
           title="Node Information"
           subtitle="Identity and runtime details"
-          action={<Server className="size-4 text-[var(--text-muted)]" />}
+          className="flex h-full flex-col"
+          bodyClassName="flex-1"
+          action={<Server className="size-4 text-mut2" />}
         >
+          <div className="flex h-full flex-col">
           <InfoRow
             label="Node Name"
             value={shortId}
             highlight
             copyable
             copyValue={shortId}
+            grow
           />
-          <InfoRow label="Node ID" value={node.ID} monospace copyable />
+          <InfoRow label="Node ID" value={node.ID} monospace copyable grow />
           <InfoRow
             label="Infra Status"
             value={
-              <Badge variant={statusVariant(node.InfraStatus)}>
-                {node.InfraStatus || "UNKNOWN"}
-              </Badge>
+              <StatusPill status={node.InfraStatus} />
             }
+            grow
           />
           <InfoRow
             label="App Status"
             value={
-              <Badge variant={statusVariant(node.AppStatus)}>
-                {node.AppStatus || "UNKNOWN"}
-              </Badge>
+              <StatusPill status={node.AppStatus} />
             }
+            grow
           />
           <InfoRow
             label="Provider"
@@ -261,32 +267,36 @@ export function NodeOverviewTab({
                 <span className="capitalize">{provider}</span>
               </div>
             }
+            grow
           />
-          <InfoRow label="Parent Deployment" value={deployment.Name} copyable />
+          <InfoRow label="Parent Deployment" value={deployment.Name} copyable grow />
           <InfoRow
             label="Deployment ID"
             value={deployment.ID}
             monospace
             copyable
+            grow
           />
           <InfoRow
             label="Instance Type"
             value={deployment.InstanceName || deployment.InstanceTypeID || "-"}
+            grow
           />
           <InfoRow
             label="Model ID"
             value={deployment.ModelID || "-"}
             copyable
+            grow
           />
-          <InfoRow label="Created At" value={createdAt} />
-          <InfoRow label="Last Updated" value={updatedAt} />
+          <InfoRow label="Created At" value={createdAt} grow />
+          <InfoRow label="Last Updated" value={updatedAt} grow />
+          </div>
         </SectionCard>
 
         <div className="flex h-full flex-col gap-3">
           <SectionCard
             title={`Running Workloads (${containers.length})`}
             subtitle="Containers on this node"
-            className="flex flex-1 flex-col"
             action={
               <Button
                 variant="ghost"
@@ -298,85 +308,125 @@ export function NodeOverviewTab({
             }
           >
             {containers.length === 0 ? (
-              <div className="flex flex-1 items-center justify-center rounded border border-dashed border-[var(--border)] px-3 py-6 text-center">
-                <div>
-                  <Boxes className="mx-auto size-4 text-[var(--text-muted)] opacity-50" />
-                  <p className="mt-2 text-xs font-medium text-[var(--text-muted)]">
-                    No containers on this node
-                  </p>
-                </div>
+              <div className="px-4 py-8 text-center">
+                <Boxes className="mx-auto size-4 text-mut2 opacity-50" />
+                <p className="mt-2 text-xs font-medium text-mut2">
+                  No containers on this node
+                </p>
               </div>
             ) : (
-              <div className="flex-1 divide-y divide-[var(--border)]">
+              <div className="divide-y divide-line">
                 {containers.slice(0, 8).map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => onOpenTab("workloads")}
-                    className="flex w-full items-center gap-2.5 px-1 py-2 text-left transition hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-field"
                   >
                     <span
                       className={`size-2 shrink-0 rounded-full ${workloadDot}`}
                     />
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-main)]">
-                      {c.name}
-                      <span className="ml-2 truncate font-mono text-[11px] font-normal text-[var(--text-muted)]">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold text-fg">
+                        {c.name}
+                      </span>
+                      <span className="block truncate font-mono text-[11px] text-mut2">
                         {c.image}
                       </span>
                     </span>
-                    <span
-                      className={`shrink-0 text-[11px] font-medium ${
-                        workloadRunning
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-[var(--text-muted)]"
-                      }`}
-                    >
-                      {workloadRunning ? "Running" : workloadStatus}
-                    </span>
+                    <StatusPill status={workloadStatus} />
                   </button>
                 ))}
-                 {containers.length > 8 && (
-                   <button
-                     type="button"
-                     onClick={() => onOpenTab("workloads")}
-                     className="w-full px-1 py-1.5 text-left text-[11px] font-medium text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
-                   >
-                     +{containers.length - 8} more
-                   </button>
-                 )}
+                {containers.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTab("workloads")}
+                    className="w-full px-4 py-2.5 text-left text-[11px] font-medium text-mut2 transition hover:bg-field hover:text-fg"
+                  >
+                    +{containers.length - 8} more containers
+                  </button>
+                )}
               </div>
-             )}
+            )}
+          </SectionCard>
+
+          <SectionCard
+            title="Node Metrics"
+            subtitle="CPU, memory and network preview"
+            className="flex flex-1 flex-col"
+            action={
+              <span className="inline-flex h-[22px] items-center whitespace-nowrap rounded-full border border-line bg-card px-[9px] text-[11.5px] text-mut2">
+                Soon
+              </span>
+            }
+          >
+            <div className="grid flex-1 divide-y divide-line sm:grid-cols-2 sm:divide-y-0 sm:divide-x">
+              <div className="flex flex-col p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-mut2">
+                  <Cpu className="size-3.5" strokeWidth={1.7} />
+                  CPU utilization
+                </div>
+                <div className="relative mt-2.5 min-h-[110px] flex-1 overflow-hidden rounded-lg bg-field">
+                  <FakeGraph />
+                  <FakeGraph dashed />
+                  <div className="absolute inset-0 grid place-items-center">
+                    <span className="rounded-full border border-line bg-card px-2.5 py-1 text-[10px] font-medium text-mut">
+                      Telemetry pending
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-mut2">
+                  <MemoryStick className="size-3.5" strokeWidth={1.7} />
+                  Memory usage
+                </div>
+                <div className="relative mt-2.5 min-h-[110px] flex-1 overflow-hidden rounded-lg bg-field">
+                  <FakeGraph dashed />
+                  <FakeGraph />
+                  <div className="absolute inset-0 grid place-items-center">
+                    <span className="rounded-full border border-line bg-card px-2.5 py-1 text-[10px] font-medium text-mut">
+                      Telemetry pending
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-line px-4 py-2.5 text-center text-[11px] text-mut">
+              Live node telemetry (CPU, memory, disk, network) will appear here
+              once agent metrics streaming lands.
+            </div>
           </SectionCard>
 
           <SectionCard
             title="Endpoints"
             subtitle="Direct access for this node"
             action={
-              <span className="rounded bg-[var(--surface-hover)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+              <span className="rounded bg-field px-1.5 py-0.5 text-[10px] font-medium text-mut2">
                 {endpoints.length}
               </span>
             }
           >
             {endpoints.length === 0 ? (
-              <div className="rounded border border-dashed border-[var(--border)] px-3 py-4 text-center text-[11px] text-[var(--text-muted)]">
+              <div className="px-4 py-6 text-center text-[11px] text-mut2">
                 No endpoints resolved yet. They appear when the node is ready.
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="divide-y divide-line">
                 {endpoints.map((ep, idx) => (
                   <div
                     key={`${ep.url}-${idx}`}
-                    className="flex items-center justify-between gap-3 rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2"
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-field"
                   >
                     <div className="flex min-w-0 items-center gap-2 text-[11px]">
                       <Link2
                         size={12}
-                        className="shrink-0 text-[var(--text-muted)]"
+                        className="shrink-0 text-mut2"
                       />
-                      <span className="font-mono text-[var(--text-main)]">
+                      <span className="font-mono text-fg">
                         :{ep.port}
                       </span>
-                      <span className="truncate font-mono text-[var(--text-muted)]">
+                      <span className="truncate font-mono text-mut2">
                         {ep.url}
                       </span>
                     </div>
@@ -385,7 +435,7 @@ export function NodeOverviewTab({
                         href={ep.url}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg)] hover:text-[var(--text-main)]"
+                        className="rounded p-1 text-mut2 transition hover:bg-card hover:text-fg"
                         title="Open endpoint"
                       >
                         <ExternalLink size={12} />

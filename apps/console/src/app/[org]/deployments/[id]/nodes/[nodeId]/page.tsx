@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Logo } from "@/components/ui/Logos";
 import {
@@ -27,14 +26,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DetailShell } from "@/components/deployments/detail/DetailShell";
-import { DetailSideNav } from "@/components/deployments/detail/DetailSideNav";
+import { DetailTabs } from "@/components/deployments/detail/DetailTabs";
+import { DetailCard } from "@/components/deployments/detail/DetailCard";
 import { NodeOverviewTab } from "@/components/deployments/node-detail/NodeOverviewTab";
 import { NodeMetricsTab } from "@/components/deployments/node-detail/NodeMetricsTab";
 import { NodeWorkloadsTab } from "@/components/deployments/node-detail/NodeWorkloadsTab";
 import { NodeEventsTab } from "@/components/deployments/node-detail/NodeEventsTab";
 import { NodeLogsTab } from "@/components/deployments/node-detail/NodeLogsTab";
 import { NodeConfigurationTab } from "@/components/deployments/node-detail/NodeConfigurationTab";
-import { shortNodeId } from "@/components/deployments/node-detail/shared";
+import { shortNodeId, StatusPill } from "@/components/deployments/node-detail/shared";
 import { useOrgHref } from "@/lib/org";
 import { apiFetch } from "@/lib/api";
 
@@ -148,26 +148,9 @@ export default function NodeDetailPage(props: {
     return () => clearInterval(intervalId);
   }, [params.id, params.nodeId]);
 
-  const statusVariant = (status: string) => {
-    const value = status?.toUpperCase();
-    if (
-      value === "RUNNING" ||
-      value === "READY" ||
-      value === "HEALTHY" ||
-      value === "COMPLETED"
-    ) {
-      return "success" as const;
-    }
-    if (value === "PARTIAL" || value === "PENDING" || value === "SCALING")
-      return "warning" as const;
-    if (value === "STOPPED" || value === "FAILED" || value === "ERROR")
-      return "error" as const;
-    return "default" as const;
-  };
-
   if (loading) {
     return (
-      <div className="p-16 text-center text-sm text-[var(--text-muted)]">
+      <div className="p-16 text-center text-sm text-mut2">
         Loading node details...
       </div>
     );
@@ -175,7 +158,7 @@ export default function NodeDetailPage(props: {
 
   if (error || !node || !deployment) {
     return (
-      <div className="p-16 text-center text-sm text-[var(--text-muted)]">
+      <div className="p-16 text-center text-sm text-mut2">
         {error || "Node not found."}
       </div>
     );
@@ -209,163 +192,178 @@ export default function NodeDetailPage(props: {
   ];
 
   return (
-    <div className="mx-auto max-w-[1450px] pb-16">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href={orgHref(`/deployments/${params.id}`)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-main)]"
-            aria-label="Back to deployment"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <div className="flex size-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-main)]">
-            <Server className="size-5" />
+    <div className="mx-auto w-full max-w-[1450px] pb-16">
+      {/* Header */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <Link
+          href={orgHref(`/deployments/${params.id}`)}
+          className="inline-grid size-9 shrink-0 place-items-center rounded-[10px] border border-line bg-card text-mut2 transition hover:bg-fg/[.04] hover:text-fg"
+          aria-label="Back to deployment"
+        >
+          <ArrowLeft className="size-4" strokeWidth={1.7} />
+        </Link>
+        <div className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-line bg-card text-mut2">
+          <Server className="size-[18px]" strokeWidth={1.7} />
+        </div>
+        <div className="min-w-0">
+          <div className="mb-0.5 flex flex-wrap items-center gap-1.5 text-[11px] uppercase tracking-wider text-mut">
+            <Link
+              href={orgHref("/deployments")}
+              className="transition hover:text-fg"
+            >
+              Deployments
+            </Link>
+            <span className="text-line2">/</span>
+            <Link
+              href={orgHref(`/deployments/${params.id}`)}
+              className="transition hover:text-fg"
+            >
+              {deployment.Name}
+            </Link>
+            <span className="text-line2">/</span>
+            <span>Nodes</span>
+            <span className="text-line2">/</span>
+            <span className="font-mono text-[11px] normal-case tracking-normal text-mut2">
+              {node.ID}
+            </span>
+            <CopyButton value={node.ID} size={12} />
           </div>
-          <div>
-            <div className="mb-0.5 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
-              <Link
-                href={orgHref("/deployments")}
-                className="hover:text-[var(--text-main)]"
-              >
-                Deployments
-              </Link>
-              <span className="text-[var(--text-light)]">/</span>
-              <Link
-                href={orgHref(`/deployments/${params.id}`)}
-                className="hover:text-[var(--text-main)]"
-              >
-                {deployment.Name}
-              </Link>
-              <span className="text-[var(--text-light)]">/</span>
-              <span>Nodes</span>
-              <span className="text-[var(--text-light)]">/</span>
-              <span className="font-mono text-xs text-[var(--text-main)]">
-                {node.ID}
-              </span>
-              <CopyButton value={node.ID} size={12} />
-            </div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-[var(--text-main)]">
-                {shortId}...
-              </h1>
-              <Badge variant={statusVariant(node.InfraStatus || "")}>
-                {node.InfraStatus || "UNKNOWN"}
-              </Badge>
-              {(node.ProviderID || deployment.ProviderID) && (
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]">
-                  <Logo
-                    name={node.ProviderID || deployment.ProviderID || "nosana"}
-                    size={12}
-                  />
-                  <span className="capitalize">
-                    {node.ProviderID || deployment.ProviderID}
-                  </span>
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-[26px] font-semibold leading-tight tracking-[-.03em]">
+              {shortId}...
+            </h1>
+            <StatusPill status={node.InfraStatus} />
+            {(node.ProviderID || deployment.ProviderID) && (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-card px-2 py-0.5 text-[11px] text-mut2">
+                <Logo
+                  name={node.ProviderID || deployment.ProviderID || "nosana"}
+                  size={12}
+                />
+                <span className="capitalize">
+                  {node.ProviderID || deployment.ProviderID}
                 </span>
-              )}
-            </div>
+              </span>
+            )}
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-main)] transition hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]">
-            <MoreHorizontal className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuGroup>
-              <DropdownMenuItem disabled>Restart node (soon)</DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(orgHref(`/deployments/${params.id}`))}
-              >
-                View deployment
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="-ml-6 flex items-start gap-1.5 p-0">
-        <DetailSideNav
-          items={tabItems}
-          activeId={activeTab}
-          onSelect={(id) => setTab(id as TabId)}
-        />
-
-        <div className="min-w-0 flex-1">
-          <DetailShell>
-            {activeTab === "overview" && (
-              <NodeOverviewTab
-                deployment={deployment}
-                node={node}
-                onOpenTab={openTab}
-                statusVariant={statusVariant}
-              />
-            )}
-            {activeTab === "metrics" && (
-              <NodeMetricsTab
-                key={`${deployment.ID}:${node.ID}:metrics`}
-                deploymentId={deployment.ID}
-                nodeId={node.ID}
-                enabled={activeTab === "metrics"}
-              />
-            )}
-            {activeTab === "workloads" && (
-              <NodeWorkloadsTab
-                deployment={deployment}
-                node={node}
-                statusVariant={statusVariant}
-                onOpenTab={openTab}
-              />
-            )}
-            {activeTab === "events" && (
-              <NodeEventsTab
-                key={`${deployment.ID}:${node.ID}:events`}
-                deploymentId={deployment.ID}
-                nodeId={node.ID}
-              />
-            )}
-            {activeTab === "logs" && (
-              <NodeLogsTab
-                key={`${deployment.ID}:${node.ID}:logs`}
-                deploymentId={deployment.ID}
-                nodeId={node.ID}
-                containers={jobContainers}
-                selected={selectedContainer}
-                onSelect={(id) =>
-                  id ? setTab("logs", { container: id }) : setTab("logs")
-                }
-              />
-            )}
-            {activeTab === "terminal" && (
-              <div className="flex min-h-[420px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)]">
-                <div className="flex flex-col items-center px-6 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-hover)]">
-                    <Terminal className="size-6 text-[var(--text-muted)]" />
-                  </div>
-                  <h2 className="mt-5 text-lg font-bold tracking-tight text-[var(--text-main)]">
-                    Terminal
-                  </h2>
-                </div>
-              </div>
-            )}
-            {activeTab === "request" && (
-              <div className="flex min-h-[420px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)]">
-                <div className="flex flex-col items-center px-6 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-hover)]">
-                    <Network className="size-6 text-[var(--text-muted)]" />
-                  </div>
-                  <h2 className="mt-5 text-lg font-bold tracking-tight text-[var(--text-main)]">
-                    Request
-                  </h2>
-                </div>
-              </div>
-            )}
-            {activeTab === "configuration" && (
-              <NodeConfigurationTab deployment={deployment} node={node} />
-            )}
-          </DetailShell>
+        <div className="ml-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex size-9 items-center justify-center rounded-[10px] border border-line bg-card text-mut2 transition hover:bg-fg/[.04] hover:text-fg">
+              <MoreHorizontal className="size-4" strokeWidth={1.7} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuGroup>
+                <DropdownMenuItem disabled>Restart node (soon)</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    router.push(orgHref(`/deployments/${params.id}`))
+                  }
+                >
+                  View deployment
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Section tabs */}
+      <DetailTabs
+        items={tabItems}
+        activeId={activeTab}
+        onSelect={(id) => setTab(id as TabId)}
+        ariaLabel="Node sections"
+      />
+
+      <DetailShell>
+        {activeTab === "overview" && (
+          <NodeOverviewTab
+            deployment={deployment}
+            node={node}
+            onOpenTab={openTab}
+          />
+        )}
+        {activeTab === "metrics" && (
+          <NodeMetricsTab
+            key={`${deployment.ID}:${node.ID}:metrics`}
+            deploymentId={deployment.ID}
+            nodeId={node.ID}
+            enabled={activeTab === "metrics"}
+          />
+        )}
+        {activeTab === "workloads" && (
+          <NodeWorkloadsTab
+            deployment={deployment}
+            node={node}
+            onOpenTab={openTab}
+          />
+        )}
+        {activeTab === "events" && (
+          <NodeEventsTab
+            key={`${deployment.ID}:${node.ID}:events`}
+            deploymentId={deployment.ID}
+            nodeId={node.ID}
+          />
+        )}
+        {activeTab === "logs" && (
+          <NodeLogsTab
+            key={`${deployment.ID}:${node.ID}:logs`}
+            deploymentId={deployment.ID}
+            nodeId={node.ID}
+            containers={jobContainers}
+            selected={selectedContainer}
+            onSelect={(id) =>
+              id ? setTab("logs", { container: id }) : setTab("logs")
+            }
+          />
+        )}
+        {activeTab === "terminal" && (
+          <DetailCard
+            title="Terminal"
+            subtitle="Shell access to this node"
+            icon={<Terminal className="size-[15px]" strokeWidth={1.7} />}
+          >
+            <div className="grid min-h-[320px] place-items-center p-8">
+              <div className="flex max-w-sm flex-col items-center text-center">
+                <div className="grid size-12 place-items-center rounded-full border border-line bg-band text-mut2">
+                  <Terminal className="size-5" strokeWidth={1.7} />
+                </div>
+                <h2 className="mt-4 text-[15px] font-semibold text-fg">
+                  Terminal coming soon
+                </h2>
+                <p className="mt-1.5 text-[12.5px] text-mut2">
+                  Exec into containers on this node will appear here.
+                </p>
+              </div>
+            </div>
+          </DetailCard>
+        )}
+        {activeTab === "request" && (
+          <DetailCard
+            title="Request"
+            subtitle="Per-node request activity"
+            icon={<Network className="size-[15px]" strokeWidth={1.7} />}
+          >
+            <div className="grid min-h-[320px] place-items-center p-8">
+              <div className="flex max-w-sm flex-col items-center text-center">
+                <div className="grid size-12 place-items-center rounded-full border border-line bg-band text-mut2">
+                  <Network className="size-5" strokeWidth={1.7} />
+                </div>
+                <h2 className="mt-4 text-[15px] font-semibold text-fg">
+                  Request details coming soon
+                </h2>
+                <p className="mt-1.5 text-[12.5px] text-mut2">
+                  Traffic served by this node will appear here.
+                </p>
+              </div>
+            </div>
+          </DetailCard>
+        )}
+        {activeTab === "configuration" && (
+          <NodeConfigurationTab deployment={deployment} node={node} />
+        )}
+      </DetailShell>
     </div>
   );
 }

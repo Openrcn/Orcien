@@ -113,11 +113,11 @@ export function NodeEventsTab({ deploymentId, nodeId }: Props) {
         title="Node Events"
         subtitle="Lifecycle and health events"
         action={
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-mut2">
             <CircleDot
               className={[
                 "size-3",
-                live ? "text-emerald-500" : "text-[var(--text-muted)]",
+                live ? "text-emerald-500" : "text-mut2",
               ].join(" ")}
             />
             {live
@@ -133,13 +133,13 @@ export function NodeEventsTab({ deploymentId, nodeId }: Props) {
         }
       >
         {events.length > 0 ? (
-          <div ref={scrollRef} className="max-h-[520px] space-y-1.5 overflow-auto">
+          <div ref={scrollRef} className="max-h-[520px] space-y-1.5 overflow-auto p-3">
             {events.map((event, idx) => {
               const level = levelFor(event.log);
               return (
                 <div
                   key={idx}
-                  className="flex items-center justify-between gap-3 rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-line bg-field px-3 py-2.5"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <span
@@ -150,11 +150,11 @@ export function NodeEventsTab({ deploymentId, nodeId }: Props) {
                     >
                       {level}
                     </span>
-                    <span className="truncate text-xs text-[var(--text-main)]">
+                    <span className="truncate text-xs text-fg">
                       {event.log}
                     </span>
                   </div>
-                  <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
+                  <span className="shrink-0 font-mono text-[10px] text-mut2">
                     {formatTime(event.timestamp)}
                   </span>
                 </div>
@@ -162,9 +162,9 @@ export function NodeEventsTab({ deploymentId, nodeId }: Props) {
             })}
           </div>
         ) : (
-          <div className="rounded border border-dashed border-[var(--border)] px-3 py-4 text-center">
-            <Activity className="mx-auto size-4 text-[var(--text-muted)] opacity-50" />
-            <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+          <div className="rounded-xl border border-dashed border-line2 px-3 py-4 text-center">
+            <Activity className="mx-auto size-4 text-mut2 opacity-50" />
+            <p className="mt-2 text-[11px] text-mut2">
               {status === "connecting"
                 ? "Connecting to event feed..."
                 : error

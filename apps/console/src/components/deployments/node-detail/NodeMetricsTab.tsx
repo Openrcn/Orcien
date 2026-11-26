@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Cpu, Database, HardDrive } from "lucide-react";
+import { cn } from "cn";
 import { apiFetch } from "@/lib/api";
+import { K } from "@/components/providers/kit";
 import {
   MetricTile,
-  SectionCard,
 } from "@/components/deployments/node-detail/shared";
 
 type ContainerSample = {
@@ -100,17 +101,17 @@ function DualSparkline({
   const ready = a.length >= 2 || (b && b.length >= 2);
 
   return (
-    <div className="rounded border border-[var(--border)] bg-[var(--card-bg)] p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-muted)]">
-          <Icon className="size-3" />
+    <section className={cn(K.dbx)}>
+      <div className="flex items-center justify-between gap-2 px-2.5 pb-2 pt-2">
+        <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-mut2">
+          <Icon className="size-3.5" strokeWidth={1.7} />
           {label}
         </div>
-        <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)]">
+        <div className="flex items-center gap-2.5 font-mono text-[10.5px] text-mut2">
           {aLabel ? (
             <span>
               {aLabel}{" "}
-              <span className="text-[var(--text-main)]">
+              <span className="text-fg">
                 {latestA == null ? "--" : `${latestA.toFixed(latestA >= 100 ? 0 : 2)}${unit}`}
               </span>
             </span>
@@ -118,51 +119,53 @@ function DualSparkline({
           {bLabel ? (
             <span>
               {bLabel}{" "}
-              <span className="text-[var(--text-main)]">
+              <span className="text-fg">
                 {latestB == null ? "--" : `${latestB.toFixed(latestB >= 100 ? 0 : 2)}${unit}`}
               </span>
             </span>
           ) : null}
         </div>
       </div>
-      <div className="h-28 overflow-hidden rounded bg-[var(--surface-hover)]">
-        {!ready ? (
-          <div className="flex h-full items-center justify-center text-[10px] text-[var(--text-muted)]">
-            {emptyHint}
-          </div>
-        ) : (
-          <svg
-            viewBox={`0 0 ${w} ${h}`}
-            className="h-full w-full"
-            preserveAspectRatio="none"
-          >
-            {a.length >= 2 ? (
-              <polyline
-                fill="none"
-                stroke="var(--text-main)"
-                strokeWidth="2"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                points={toPoints(a)}
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-            {b && b.length >= 2 ? (
-              <polyline
-                fill="none"
-                stroke="var(--text-muted)"
-                strokeWidth="2"
-                strokeDasharray="4 3"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                points={toPoints(b)}
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-          </svg>
-        )}
+      <div className={cn(K.inner, "p-2.5")}>
+        <div className="relative h-28 overflow-hidden rounded-lg bg-field">
+          {!ready ? (
+            <div className="flex h-full items-center justify-center text-[10px] text-mut2">
+              {emptyHint}
+            </div>
+          ) : (
+            <svg
+              viewBox={`0 0 ${w} ${h}`}
+              className="h-full w-full"
+              preserveAspectRatio="none"
+            >
+              {a.length >= 2 ? (
+                <polyline
+                  fill="none"
+                  stroke="rgb(var(--fg))"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  points={toPoints(a)}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {b && b.length >= 2 ? (
+                <polyline
+                  fill="none"
+                  stroke="rgb(var(--mut2))"
+                  strokeWidth="2"
+                  strokeDasharray="4 3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  points={toPoints(b)}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+            </svg>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -250,7 +253,7 @@ export function NodeMetricsTab({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[11px] text-[var(--text-muted)]">
+        <div className="text-[11px] text-mut2">
           Container metrics · last ~5 minutes
           {updatedAt ? ` · updated ${updatedAt}` : ""}
         </div>
@@ -258,7 +261,7 @@ export function NodeMetricsTab({
           <select
             value={container}
             onChange={(e) => setContainer(e.target.value)}
-            className="rounded border border-[var(--border)] bg-[var(--card-bg)] px-2 py-1 text-[11px] text-[var(--text-main)]"
+            className="rounded-lg border border-line bg-card px-2 py-1 text-[11px] text-fg"
           >
             {(metrics?.containers || []).map((id) => (
               <option key={id} value={id}>
@@ -270,7 +273,7 @@ export function NodeMetricsTab({
       </div>
 
       {error ? (
-        <div className="rounded border border-dashed border-[var(--border)] px-3 py-4 text-center text-[11px] text-[var(--text-muted)]">
+        <div className="rounded-xl border border-dashed border-line2 px-3 py-4 text-center text-[11px] text-mut2">
           {error}
         </div>
       ) : null}
@@ -280,6 +283,7 @@ export function NodeMetricsTab({
           label="CPU"
           value={fmtNum(latest?.cpu?.usage_percent, 2, "%")}
           meta={container || "Telemetry pending"}
+          icon={Cpu}
         />
         <MetricTile
           label="Memory"
@@ -289,66 +293,60 @@ export function NodeMetricsTab({
               ? `${fmtMB(latest.memory.used_mb)} / ${fmtMB(latest.memory.total_mb)}`
               : "Telemetry pending"
           }
+          icon={Database}
         />
         <MetricTile
           label="Disk I/O"
           value={fmtMB(latest?.disk?.read_mb)}
           meta={`write ${fmtMB(latest?.disk?.write_mb)}`}
+          icon={HardDrive}
         />
         <MetricTile
           label="Network I/O"
           value={fmtMB(latest?.network?.rx_mb)}
           meta={`sent ${fmtMB(latest?.network?.tx_mb)}`}
+          icon={Activity}
         />
       </div>
 
-      <SectionCard
-        title="Live Charts"
-        subtitle={
-          container
-            ? `opId · ${container}`
-            : "CPU, memory, disk I/O, network I/O"
-        }
-      >
-        <div className="grid gap-2 lg:grid-cols-2">
-          <DualSparkline
-            label="CPU"
-            icon={Cpu}
-            a={cpuSeries}
-            aLabel="util"
-            unit="%"
-            emptyHint="Waiting for CPU samples..."
-          />
-          <DualSparkline
-            label="Memory"
-            icon={Database}
-            a={memSeries}
-            aLabel="util"
-            unit="%"
-            emptyHint="Waiting for memory samples..."
-          />
-          <DualSparkline
-            label="Disk I/O"
-            icon={HardDrive}
-            a={diskRead}
-            b={diskWrite}
-            aLabel="read"
-            bLabel="write"
-            unit=" MB"
-            emptyHint="Waiting for disk samples..."
-          />
-          <DualSparkline
-            label="Network I/O"
-            icon={Activity}
-            a={netRx}
-            b={netTx}
-            aLabel="rx"
-            bLabel="tx"
-            unit=" MB"
-            emptyHint="Waiting for network samples..."
-          />
-        </div>
-      </SectionCard>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <DualSparkline
+          label="CPU"
+          icon={Cpu}
+          a={cpuSeries}
+          aLabel="util"
+          unit="%"
+          emptyHint="Waiting for CPU samples..."
+        />
+        <DualSparkline
+          label="Memory"
+          icon={Database}
+          a={memSeries}
+          aLabel="util"
+          unit="%"
+          emptyHint="Waiting for memory samples..."
+        />
+        <DualSparkline
+          label="Disk I/O"
+          icon={HardDrive}
+          a={diskRead}
+          b={diskWrite}
+          aLabel="read"
+          bLabel="write"
+          unit=" MB"
+          emptyHint="Waiting for disk samples..."
+        />
+        <DualSparkline
+          label="Network I/O"
+          icon={Activity}
+          a={netRx}
+          b={netTx}
+          aLabel="rx"
+          bLabel="tx"
+          unit=" MB"
+          emptyHint="Waiting for network samples..."
+        />
+      </div>
     </div>
   );
 }

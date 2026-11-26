@@ -6,12 +6,17 @@ import {
   Boxes,
   ExternalLink,
   Globe,
+  Network,
+  Server,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { InfoRow } from "@/components/deployments/detail/InfoRow";
+import { DetailCard } from "@/components/deployments/detail/DetailCard";
 import { Logo, getLogoCategory } from "@/components/ui/Logos";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { K } from "@/components/providers/kit";
 import { getDerivedDeploymentStatus } from "@/lib/deployment-status";
 import { useOrgHref } from "@/lib/org";
 import { apiFetch } from "@/lib/api";
@@ -31,29 +36,39 @@ function MetricTile({
   label,
   value,
   meta,
+  hint,
+  icon: Icon,
   onClick,
 }: {
   label: string;
   value: string;
   meta: string;
+  hint: string;
+  icon: LucideIcon;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3.5 text-left transition-all duration-150 hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]"
+      className="group rounded-xl border border-line bg-card p-3.5 text-left [box-shadow:var(--sh)] transition hover:border-line2 hover:bg-field"
     >
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-mut">
           {label}
         </span>
-        <ArrowUpRight className="size-3.5 text-[var(--text-muted)] transition group-hover:text-[var(--text-main)]" />
+        <span className="grid size-6 place-items-center rounded-lg border border-line bg-band text-mut2 transition group-hover:text-fg">
+          <Icon className="size-3.5" strokeWidth={1.7} />
+        </span>
       </div>
-      <div className="font-heading text-xl font-bold tracking-tight text-[var(--text-main)]">
+      <div className="mt-2.5 text-[22px] font-semibold leading-none tracking-[-.02em] text-fg">
         {value}
       </div>
-      <div className="mt-1 text-[11px] text-[var(--text-muted)]">{meta}</div>
+      <div className="mt-1.5 text-[11.5px] text-mut">{meta}</div>
+      <div className="mt-2.5 flex items-center gap-1 border-t border-line pt-2 text-[11px] font-medium text-mut2 transition group-hover:text-accent-t">
+        {hint}
+        <ArrowUpRight className="size-3" strokeWidth={1.7} />
+      </div>
     </button>
   );
 }
@@ -148,51 +163,52 @@ export function OverviewTab({
   const isRunning = ["RUNNING", "READY"].includes(derivedStatus);
 
   return (
-    <div className="space-y-3">
-      {/* Stat Cards */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-5">
+      {/* Stat tiles */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           label="Replicas"
           value={nodes.length ? String(healthyNodes) : "--"}
           meta={nodes.length ? `Healthy of ${nodes.length}` : "No nodes yet"}
+          hint="View nodes"
+          icon={Server}
           onClick={() => onOpenTab("replicas")}
         />
         <MetricTile
           label="Ports"
           value={specPorts.length ? String(specPorts.length) : "--"}
           meta={specPorts.length ? "Exposed in spec" : "No ports declared"}
+          hint="View configuration"
+          icon={Network}
           onClick={() => onOpenTab("configuration")}
         />
         <MetricTile
           label="Healthy Replicas"
           value={nodes.length ? `${healthyNodes} / ${nodes.length}` : "--"}
           meta="Replica health"
+          hint="View nodes"
+          icon={Boxes}
           onClick={() => onOpenTab("replicas")}
         />
         <MetricTile
           label="API Access"
           value="Ready"
           meta="OpenAI-compatible"
+          hint="View API"
+          icon={Globe}
           onClick={() => onOpenTab("api")}
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        {/* Deployment Info */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-          <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--text-main)]">
-                Deployment Information
-              </h2>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                Identity and specification details
-              </p>
-            </div>
-            <Boxes className="size-4 text-[var(--text-muted)]" />
-          </div>
+      {/* Details */}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+        <DetailCard
+          title="Deployment information"
+          subtitle="Identity and specification"
+          icon={<Boxes className="size-[15px]" strokeWidth={1.7} />}
+        >
           <InfoRow
-            label="Deployment Name"
+            label="Deployment name"
             value={deployment.Name}
             highlight
             copyable
@@ -232,9 +248,7 @@ export function OverviewTab({
                 )}
                 <span className="capitalize">{providerName}</span>
                 {connectionName && (
-                  <span className="text-[var(--text-muted)]">
-                    ({connectionName})
-                  </span>
+                  <span className="text-mut">({connectionName})</span>
                 )}
               </div>
             }
@@ -257,22 +271,15 @@ export function OverviewTab({
             value={deployment.InstanceName || "-"}
             copyable
           />
-          <InfoRow label="Created At" value={createdAt} />
-        </div>
+          <InfoRow label="Created at" value={createdAt} />
+        </DetailCard>
 
-        {/* Right column */}
-        <div className="flex h-full flex-col gap-3">
-          {/* Active Nodes Preview */}
-          <div className="flex flex-1 flex-col rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-            <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--text-main)]">
-                  Active Nodes Preview
-                </h2>
-                <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                  Assigned replicas
-                </p>
-              </div>
+        <div className="space-y-5">
+          <DetailCard
+            title="Active nodes"
+            subtitle="Assigned replicas"
+            icon={<Server className="size-[15px]" strokeWidth={1.7} />}
+            action={
               <Button
                 variant="ghost"
                 size="sm"
@@ -280,166 +287,182 @@ export function OverviewTab({
               >
                 View all
               </Button>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {nodes.length === 0 ? (
-                <div className="rounded border border-dashed border-[var(--border)] p-3 text-center text-xs text-[var(--text-muted)]">
-                  Nodes will appear when registered.
-                </div>
+            }
+          >
+            {nodes.length === 0 ? (
+              <div className="m-3 rounded-xl border border-dashed border-line2 px-3 py-5 text-center text-[12px] text-mut">
+                Nodes will appear when registered.
+              </div>
+            ) : (
+              <div className="divide-y divide-line">
+                {nodes.slice(0, 8).map((node: any) => (
+                  <div
+                    key={node.ID}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 transition hover:bg-fg/[.03]"
+                  >
+                    <div className="flex min-w-0 items-center gap-2 font-mono text-[12px] text-fg">
+                      <span
+                        className={[
+                          "size-1.5 shrink-0 rounded-full",
+                          statusVariant(node.InfraStatus || "UNKNOWN") ===
+                          "success"
+                            ? "bg-ok"
+                            : statusVariant(node.InfraStatus || "UNKNOWN") ===
+                                "warning"
+                              ? "bg-warn"
+                              : statusVariant(node.InfraStatus || "UNKNOWN") ===
+                                  "error"
+                                ? "bg-bad"
+                                : "bg-mut",
+                        ].join(" ")}
+                      />
+                      <Logo
+                        name={
+                          node.ProviderID || deployment.ProviderID || "nosana"
+                        }
+                        size={13}
+                      />
+                      <span className="text-mut">:</span>
+                      <span className="truncate">{node.ID}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <CopyButton value={node.ID} size={12} />
+                      <Link
+                        href={orgHref(
+                          `/deployments/${deployment.ID}/nodes/${node.ID}`,
+                        )}
+                        className="rounded-md p-1 text-mut transition hover:bg-fg/[.05] hover:text-fg"
+                        title="Open node details"
+                      >
+                        <ArrowUpRight className="size-3.5" strokeWidth={1.7} />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {nodes.length > 8 && (
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2.5 text-left text-[11.5px] font-medium text-accent-t transition hover:bg-fg/[.03]"
+                  >
+                    +{nodes.length - 8} more
+                  </button>
+                )}
+              </div>
+            )}
+          </DetailCard>
+
+          <DetailCard
+            title="Endpoints"
+            subtitle="Reserved URL for each declared port"
+            icon={<Globe className="size-[15px]" strokeWidth={1.7} />}
+            action={
+              isRunning ? (
+                <span className={K.pill}>
+                  {publicCount > 0
+                    ? `${publicCount} public`
+                    : "No public ports"}
+                </span>
               ) : (
-                <div className="grid content-start gap-1">
-                  {nodes.slice(0, 8).map((node: any) => (
+                <span className={K.warn}>
+                  Inactive · {deployment.Status || "stopped"}
+                </span>
+              )
+            }
+          >
+            {specPorts.length > 0 ? (
+              <div className="divide-y divide-line">
+                {specPorts.map((p) => {
+                  const url = reservedUrl(p.port);
+                  return (
                     <div
-                      key={node.ID}
-                      className="flex items-center justify-between rounded border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-xs"
+                      key={p.port}
+                      className={
+                        "flex items-center justify-between gap-3 px-4 py-2.5 " +
+                        (isRunning ? "" : "opacity-50")
+                      }
                     >
-                      <div className="flex items-center gap-2 font-mono text-[var(--text-main)]">
+                      <div className="flex shrink-0 items-center gap-2">
                         <span
                           className={[
                             "size-1.5 rounded-full",
-                            statusVariant(node.InfraStatus || "UNKNOWN") ===
-                            "success"
-                              ? "bg-emerald-500"
-                              : statusVariant(node.InfraStatus || "UNKNOWN") ===
-                                  "warning"
-                                ? "bg-amber-500"
-                                : statusVariant(node.InfraStatus || "UNKNOWN") ===
-                                    "error"
-                                  ? "bg-red-500"
-                                  : "bg-[var(--text-muted)]",
+                            isRunning ? "bg-ok" : "bg-mut",
                           ].join(" ")}
                         />
-                        <Logo
-                          name={
-                            node.ProviderID || deployment.ProviderID || "nosana"
-                          }
-                          size={13}
-                        />
-                        <span className="text-[var(--text-muted)]">:</span>
-                        <span>{node.ID}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CopyButton value={node.ID} size={12} />
-                        <Link
-                          href={orgHref(`/deployments/${deployment.ID}/nodes/${node.ID}`)}
-                          className="rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--card-bg)] hover:text-[var(--text-main)]"
-                          title="Open node details"
-                        >
-                          <ArrowUpRight className="size-3.5" />
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                  {nodes.length > 8 && (
-                    <div key="extra-nodes">
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-center rounded border border-[var(--border)] bg-[var(--surface-hover)] p-2.5 text-left transition hover:border-[var(--border-hover)]"
-                      >
-                        <span className="text-[11px] font-medium text-[var(--text-main)]">
-                          +{nodes.length - 8} more
+                        <span className="font-mono text-[11.5px] font-medium text-fg">
+                          :{p.port}
                         </span>
-                      </button>
+                        <span className="text-[10px] uppercase text-mut">
+                          {p.protocol}
+                        </span>
+                        <span
+                          className={
+                            p.isPublic
+                              ? K.ok
+                              : "rounded-full border border-line bg-band px-2 py-0.5 text-[10px] font-medium text-mut2"
+                          }
+                        >
+                          {p.isPublic ? "public" : "internal"}
+                        </span>
+                      </div>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className="truncate font-mono text-[11px] text-mut2"
+                          title={url}
+                        >
+                          {url}
+                        </span>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="shrink-0 rounded-md p-1 text-mut transition hover:bg-fg/[.05] hover:text-fg"
+                          title={`Open :${p.port}`}
+                        >
+                          <ExternalLink className="size-3" strokeWidth={1.7} />
+                        </a>
+                        <CopyButton value={url} size={12} />
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="m-3 rounded-xl border border-dashed border-line2 px-3 py-4 text-center text-[11.5px] text-mut">
+                No ports declared in the job spec yet.
+              </div>
+            )}
+          </DetailCard>
 
-          {/* Endpoints — reserved gateway URL per declared port */}
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-        <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-          <div className="flex items-center gap-2">
-            <Globe size={14} className="text-[var(--text-muted)]" />
-            <h2 className="text-sm font-bold text-[var(--text-main)]">
-              Endpoints
-            </h2>
-            <span className="rounded bg-[var(--surface-hover)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
-              {specPorts.length} port{specPorts.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          {isRunning ? (
-            <span className="text-[11px] text-[var(--text-muted)]">
-              {publicCount > 0
-                ? `${publicCount} public`
-                : "No public ports in spec"}
-            </span>
-          ) : (
-            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500">
-              Inactive while {deployment.Status || "stopped"}
-            </span>
-          )}
-        </div>
-
-        {specPorts.length > 0 ? (
-          <div
-            className={[
-              "divide-y divide-[var(--border)] rounded border border-[var(--border)]",
-              isRunning ? "" : "opacity-50 grayscale",
-            ].join(" ")}
+          <DetailCard
+            title="Requests"
+            subtitle="Inference request activity"
+            icon={<Network className="size-[15px]" strokeWidth={1.7} />}
+            action={<span className={K.off}>Coming soon</span>}
           >
-            {specPorts.map((p) => {
-              const url = reservedUrl(p.port);
-              return (
+            <div className="m-3 grid gap-2 sm:grid-cols-3">
+              {[
+                ["Requests / min", "--"],
+                ["p95 latency", "--"],
+                ["Error rate", "--"],
+              ].map(([label, value]) => (
                 <div
-                  key={p.port}
-                  className="flex items-center justify-between gap-3 px-3 py-2"
+                  key={label}
+                  className="rounded-xl border border-line bg-band px-3 py-2.5"
                 >
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className={[
-                        "size-1.5 rounded-full",
-                        isRunning
-                          ? "bg-emerald-500"
-                          : "bg-[var(--text-muted)]",
-                      ].join(" ")}
-                    />
-                    <span className="font-mono text-[11px] font-semibold text-[var(--text-main)]">
-                      :{p.port}
-                    </span>
-                    <span className="text-[10px] uppercase text-[var(--text-muted)]">
-                      {p.protocol}
-                    </span>
-                    <span
-                      className={[
-                        "rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
-                        p.isPublic
-                          ? "bg-emerald-500/10 text-emerald-500"
-                          : "bg-[var(--surface-hover)] text-[var(--text-muted)]",
-                      ].join(" ")}
-                    >
-                      {p.isPublic ? "public" : "internal"}
-                    </span>
+                  <div className="text-[10.5px] font-medium uppercase tracking-wider text-mut">
+                    {label}
                   </div>
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span
-                      className="truncate font-mono text-[11px] text-[var(--text-muted)]"
-                      title={url}
-                    >
-                      {url}
-                    </span>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="shrink-0 rounded p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text-main)]"
-                      title={`Open :${p.port}`}
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                    <CopyButton value={url} size={12} />
+                  <div className="mt-1 text-[16px] font-semibold text-fg">
+                    {value}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded border border-dashed border-[var(--border)] px-3 py-2.5 text-center text-[11px] text-[var(--text-muted)]">
-            No ports declared in the job spec yet.
-          </div>
-        )}
-          </div>
+              ))}
+            </div>
+            <div className="mx-3 mb-3 rounded-xl border border-dashed border-line2 bg-field px-3 py-4 text-center text-[11.5px] text-mut">
+              Live request metrics, rate-limit usage and cost roll-ups for this
+              deployment will appear here.
+            </div>
+          </DetailCard>
         </div>
       </div>
     </div>

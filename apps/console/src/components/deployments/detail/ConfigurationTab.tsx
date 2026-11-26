@@ -3,6 +3,7 @@ import React from "react";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Braces, LayoutList } from "lucide-react";
 import { SpecViewer } from "./SpecViewer";
+import { DetailCard } from "./DetailCard";
 
 function highlightJSON(jsonString: string) {
   if (!jsonString) return null;
@@ -66,48 +67,53 @@ export function ConfigurationTab({ config }: { config: any }) {
   const pretty = config ? JSON.stringify(config, null, 2) : "";
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="space-y-5">
       {config && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-          <div className="mb-4 flex items-center gap-2 border-b border-[var(--border)] pb-3">
-            <LayoutList size={15} className="text-[var(--text-main)]" />
-            <h2 className="text-sm font-bold text-[var(--text-main)]">
-              Spec Details
-            </h2>
-          </div>
+        <DetailCard
+          title="Spec details"
+          subtitle="Parsed deployment specification"
+          icon={<LayoutList className="size-[15px]" strokeWidth={1.7} />}
+        >
           <SpecViewer config={config} />
-        </div>
+        </DetailCard>
       )}
 
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4">
-        <div className="flex items-center justify-between border-[var(--border)] pb-3">
-          <div className="flex items-center gap-2">
-            <Braces size={15} className="text-[var(--text-main)]" />
-            <h2 className="text-sm font-bold text-[var(--text-main)]">
-              Raw JSON
-            </h2>
-          </div>
-          {pretty && (
+      <DetailCard
+        title="Raw JSON"
+        subtitle="Full configuration payload"
+        icon={<Braces className="size-[15px]" strokeWidth={1.7} />}
+        action={
+          pretty ? (
             <CopyButton
               value={pretty}
               size={14}
               title="Copy configuration JSON"
             />
-          )}
-        </div>
-
+          ) : undefined
+        }
+      >
         {pretty ? (
-          <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0d1117] p-4">
-            <pre className="overflow-x-auto text-xs leading-relaxed font-mono whitespace-pre-wrap break-all text-slate-300">
-              <code>{highlightJSON(pretty)}</code>
-            </pre>
+          <div className="overflow-x-auto p-3.5 font-mono text-xs leading-relaxed">
+            {pretty.split("\n").map((line, i) => (
+              <div
+                key={i}
+                className="flex gap-3 border-b border-line/30 py-[3px] last:border-b-0"
+              >
+                <span className="w-6 shrink-0 select-none text-right text-mut2 opacity-40">
+                  {i + 1}
+                </span>
+                <code className="min-w-0 flex-1 whitespace-pre-wrap break-all">
+                  {highlightJSON(line)}
+                </code>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-[var(--border)] bg-[var(--surface-hover)] p-8 text-center text-xs text-[var(--text-muted)]">
+          <div className="m-3 rounded-xl border border-dashed border-line2 bg-field p-8 text-center text-[12px] text-mut2">
             No raw configuration specification stored for this deployment.
           </div>
         )}
-      </div>
+      </DetailCard>
     </div>
   );
 }
